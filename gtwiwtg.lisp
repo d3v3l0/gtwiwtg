@@ -98,32 +98,31 @@
   gen)
 
 (defun filter! (pred gen)
-  (let ((orig-fn (next-fn gen))
-        (orig-p-fn (next-p-fn gen)))
-    (setf (next-fn gen) (labels ((recurse (state) 
-                                   (multiple-value-bind (val next-state) (funcall orig-fn state)
-                                     (if (funcall pred val)
-                                         (values val next-state)
-                                         (if ()) (recurse next-state)))))))))
+  (let* ((orig-fn (next-fn gen))
+         (orig-p-fn (next-p-fn gen))
+         (last-good nil)
+         (last-known-state (gen-state gen))
+         (new-next-p-fn (lambda (state)
+                          (or last-good
+                              (loop :while (funcall orig-p-fn state)
+                                 :do (multiple-value-bind (val new-state) (funcall orig-fn state)
+                                       (if (funcall pred val)
+                                           (progn  (setf last-good (list val))
+                                                   (setf last-known-state (list new-state))
+                                                   (return t))
+                                           (setf state new-state)))
+                                 :finally (return nil))))))
 
-(defun chain! (gen-of-gen)
-  (let ((orig-fn (next-fn gen-of-gen))
-        (orig-p (next-p-fn gen-of-gen))
-        (orig-state (gen-state gen-of-gen)))
-    (multiple-value-bind (subgen state) (funcall orig-fn orig-state)
-      (setf orig-state state)
-      (setf (gen-state gen-of-gen) subgen)
-      (setf (next-p-fn gen-of-gen)
-            (lambda (sub) (or (has-next-p sub)
-                              (funcall orig-p orig-state))))
-      (setf (next-fn gen-of-gen)
-            (lambda (sub)
-              (if (has-next-p sub)
-                  (values (next sub) sub)
-                  (multiple-value-bind (next-sub state) (funcall orig-fn orig-state)
-                    (setf orig-state state)
-                    (values (next next-sub) next-sub))))))
-    gen-of-gen))
+    (setf (next-p-fn gen) new-next-p-fn)
+
+    (setf (next-fn gen) (lambda (state)
+                          (declare (ignore state))
+                          (let ((tmp-state (car last-known-state))
+                                (tmp-val (car last-good)))
+                            (setf last-good nil)
+                            (setf last-known-state nil)
+                            (values tmp-val tmp-state))))
+    gen))
 
 
 (defun bind! (fn gen)
@@ -148,12 +147,6 @@
 
 
 (defun thread-through (elem vec)
-  "Returns a generator! of vectors. Each vector is 1+ longer than
-VEC. Each vector looks just like VEC except ELEM is inserted in one
-position.  Returns (1+ (length VEC)) such vectors.
-
-NB: The memory is shared between generated vectors. If you must keep
-that memory around, copy the vector somehow. "
   (let ((target (concatenate 'vector vec (list elem)))) ;; reusable buffer
     (flet ((fill-and-insert (idx) ;; inserts elem into target at idx,
                                   ;; fills rest with vec
@@ -193,3 +186,11 @@ permutations one at a time."
           :do
             ,expr-body))))
 
+(defmacro fold ((fold-var init-val) (var-exp gen) expr)
+  `(let ((,fold-var ,init-val))
+     (iter (,var-exp ,gen)
+       (setf ,fold-var ,expr))
+     ,fold-var))
+
+(defun collect (gen)
+  (nreverse (fold-into (xs nil) (x gen) (cons x xs))))
