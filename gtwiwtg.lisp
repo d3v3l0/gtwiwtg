@@ -427,6 +427,26 @@ CONCAT! MODIFIES AND RETURNS ITS FIRST ARGUMENT."
 
 
 (defun merge! (comparator gen1 gen2 &rest gens)
+  "Emulates the behavior of MERGE (in the ANSI standard), but for generators.
+
+The emulation is not perfect, but it holds in the following sense: If
+all the inputs are sorted according to COMPARATOR then the output will
+also be sorted according to COMPARATOR.
+
+The generator created through a merge has a length that is maximal
+among the lengths of the arguments to MERGE!. Hence, if any of the
+arguments is an infinite generator, then the merged generator is also
+infinite.
+
+An example:
+
+> (collect (merge! #'< 
+                  (times 4) 
+                  (range :from 4 :to 10 :by 2)
+                  (range :from -10 :to 28 :by 6)))
+
+ (-10 -4 0 1 2 2 3 4 6 8 8 14 20 26)
+"
   (let ((all-gens (list* gen1 gen2 gens)))
 
     (assert (all-good all-gens))
