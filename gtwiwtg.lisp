@@ -2,7 +2,10 @@
 (in-package :gtwiwtg)
 
 (defclass generator! ()
-  ((state
+  ((dirty-p
+    :accessor dirty-p
+    :initform nil)
+   (state
     :accessor gen-state
     :initarg :state
     :initform (error "no state"))
@@ -20,7 +23,8 @@
 
 (defmethod next ((gen generator!))
   (assert (has-next-p gen))
-  (with-slots (state next-fn) gen
+  (with-slots (state next-fn dirty-p) gen
+    (setf dirty-p t)
     (multiple-value-bind (val new-state) (funcall next-fn state)
       (setf state new-state)
       val)))
@@ -80,6 +84,13 @@ the values passed as ARGS looped forever."
 (defun all-different (things)
   (= (length things) (length (remove-duplicates things))))
 
+
+(defun all-clean (gens)
+  (every (complement #'dirty-p) gens))
+
+(defun all-good (gens)
+  (and (all-clean gens) (all-different gens)))
+
 ;;; MODIFIERS and COMBINATORS
 
 (defmethod yield-to! (gen1 gen2)
@@ -123,7 +134,7 @@ generators.
 THIS FUNCTION MODIFIES AND RETURNS ITS FIRST GENERATOR ARGUMENT.
 Also, all of the generators must be different from one another. If any
 compare EQL then an error is signaled."
-  (assert (all-different (list* gen gens)))
+  (assert (all-good (list* gen gens)))
   (let ((orig-fns (mapcar #'next-fn (cons gen gens)))
         (orig-preds (mapcar #'next-p-fn (cons gen gens))))
     (setf (gen-state gen) (mapcar #'gen-state (cons gen gens))
@@ -151,6 +162,7 @@ compare EQL then an error is signaled."
 when applied to PRED.
 
 THIS FUNCTION MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
+  (assert (not (dirty-p gen)))
   (let* ((orig-fn (next-fn gen))
          (orig-p-fn (next-p-fn gen))
          (last-good nil)
@@ -186,6 +198,7 @@ equivalent to (FUNCALL #'CONCAT! (MAP! FN GEN))
 That is it generates each element of (FN X) for each X in GEN. 
 
 BIND! MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
+  (assert (not (dirty-p gen)))
   (let ((orig-fn (next-fn gen))
         (orig-p (next-p-fn gen))
         (orig-state (gen-state gen)))
@@ -213,7 +226,7 @@ Each of the arguments to CONCAT! must be different. If any compare
 EQL, an error will be signalled. 
 
 CONCAT! MODIFIES AND RETURNS ITS FIRST ARGUMENT."
-  (assert (all-different (list* gen gens)))
+  (assert (all-good (list* gen gens)))
   (bind! #'identity (seq (list* gen gens))))
 
 (defun zip! (gen &rest gens)
