@@ -50,7 +50,9 @@ If TO is NIL, then the generator produces an infinite sequence."
     (make-instance 'generator!
                    :state (list (- from by) to)
                    :next-p-fn (lambda (state) (or (not to)
-                                                  (apply comparator state)))
+                                                  (funcall comparator
+                                                           (+ by  (first state))
+                                                           (second state))))
                    :next-fn (lambda (state)
                               (incf (car state) by)
                               (values (car state) state)))))
