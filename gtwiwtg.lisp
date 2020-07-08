@@ -318,6 +318,28 @@ Example:
   "Consumes GEN by collecting its values into a list."
   (nreverse (fold (xs nil) (x gen) (cons x xs))))
 
+(defun take (n gen)
+  "Consumes GEN by collecting its first N values into a list"
+  (nreverse (fold (xs nil) (x (zip! gen (times (1- n))))
+                  (cons (car x) xs)))) 
+
+(defun pick-out (indexes gen)
+  "Consumes GEN by picking out certain members by their index. 
+
+INDEXES is a list of non-negative integers.
+
+Returns a list of values from GEN such that each value was an element
+of indexes."
+  (let ((acc (make-array (length indexes))))
+    (iter ((x idx) (zip! gen (times (apply #'max indexes))))
+      (when (member idx indexes)
+        (loop
+           :for i :below (length  indexes)
+           :for idx2 :in indexes
+           :when (= idx2 idx)
+           :do (setf (aref acc i) x))))
+    (concatenate 'list acc)))
+
 (defun size (gen)
   "Consumes GEN by calculating its size."
   (fold (n 0) (x gen) (1+ n)))
@@ -362,7 +384,10 @@ is minimal among the values of GEN.  VALUE is the value of (FUNCALL FN X)"
               am))))
 
 
-;;; example
+;;; EXAMPLES
+
+
+;; permutations
 
 (defun fill-and-insert (idx elem vec buffer)
   "A Utility function that inserts ELEM at IDX into BUFFER. For every
@@ -394,3 +419,16 @@ Not meant for general use. just a utility used by THREAD-THROUGH"
                                          :displaced-index-offset 1
                                          :element-type (array-element-type vec)))))
         (inflate! (lambda (subperm) (thread-through elem subperm)) subperms))))
+
+
+;; primes
+
+(defun prime-p (n) 
+  (loop
+     :for x :from 2 :upto (sqrt n)
+     :when (zerop (mod n x)) :do (return nil)
+     :finally (return t)))
+
+(defun all-primes ()
+  (filter! #'prime-p (range :from 1)))
+

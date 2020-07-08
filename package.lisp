@@ -15,6 +15,8 @@
            #:iter
            #:fold
            #:collect
+           #:take
+           #:pick-out
            #:size
            #:maximum
            #:minimum
