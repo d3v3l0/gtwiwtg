@@ -35,18 +35,27 @@
 ;;; CONSTRUCTORS
 
 (defun range (&key (from 0) to (by 1))
-  (make-instance 'generator!
-                 :state (list (- from by) to)
-                 :next-p-fn (lambda (state) (or (not to)
-                                                (apply #'< state)))
-                 :next-fn (lambda (state)
-                            (incf (car state) by)
-                            (values (car state) state))))
+  "Create a generator that produces a series of numbers between FROM
+and TO, inclusive, with step size of BY.
+
+If TO is NIL, then the generator produces an infinite sequence."
+  (let ((comparator (if (plusp by) #'< #'>)))
+    (make-instance 'generator!
+                   :state (list (- from by) to)
+                   :next-p-fn (lambda (state) (or (not to)
+                                                  (apply comparator state)))
+                   :next-fn (lambda (state)
+                              (incf (car state) by)
+                              (values (car state) state)))))
 
 (defun times (n)
+  "Shorthand for (RANGE :TO N)"
   (range :to n))
 
 (defun seq (sequence)
+  "Turns a sequecne (a list, vector, string, etc) into a
+generator. The resulting generator will generate exactly the memebers
+of the sequence."
   (make-instance 'generator!
                  :state 0
                  :next-p-fn (lambda (state)
@@ -56,6 +65,8 @@
                               (values val (1+ state))))))
 
 (defun repeater (&rest args)
+  "Produces a generator that produces an infinite series consisting in
+the values passed as ARGS looped forever."
   (make-instance 'generator!
                  :state (copy-list args)
                  :next-p-fn (constantly t)
@@ -72,9 +83,16 @@
 ;;; MODIFIERS and COMBINATORS
 
 (defmethod yield-to! (gen1 gen2)
+  "GEN1 passes generation control to GEN2. This control will be return
+to GEN1 after GEN2 is done. This function modifies GEN1.
+
+Hence, YIELD-TO! can be used within an iteration to conditionally dive
+off into some new iteration, knowing that business as usuall will
+resume when the \"sub iteration\" finishes.
+
+It is kind of dark magic, and so I don't recommend using it except in
+the rareest of circumstances."
   (assert (not (eq gen1 gen2)))
-  "Gen1 passes generation control to gen2. This control will be return
-  to gen1 after gen2 is done. Returns a new generator!. "
   (let ((orig-pred (next-p-fn gen1))
         (orig-fn (next-fn gen1)))
     (with-slots ((s1 state) (p1 next-p-fn) (f1 next-fn)) gen1
@@ -93,6 +111,18 @@
 
 
 (defun map! (map-fn gen &rest gens)
+  "Maps a function over a number of generators, returning a generator
+that produces values that result from calling MAP-FN on those
+generators' elements, in sequence.
+
+The resulting generator will stop producing values as soon as any one
+of the source generators runs out of arguments to pass to
+MAP-FN. I.e. The mapped generator is as long as the shortest argument
+generators.
+
+THIS FUNCTION MODIFIES AND RETURNS ITS FIRST GENERATOR ARGUMENT.
+Also, all of the generators must be different from one another. If any
+compare EQL then an error is signaled."
   (assert (all-different (list* gen gens)))
   (let ((orig-fns (mapcar #'next-fn (cons gen gens)))
         (orig-preds (mapcar #'next-p-fn (cons gen gens))))
@@ -117,6 +147,10 @@
   gen)
 
 (defun filter! (pred gen)
+  "Produces a generator that filters out members of GEN that are NIL
+when applied to PRED.
+
+THIS FUNCTION MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
   (let* ((orig-fn (next-fn gen))
          (orig-p-fn (next-p-fn gen))
          (last-good nil)
@@ -145,6 +179,13 @@
 
 
 (defun bind! (fn gen)
+  "FN is expected to be a function that accepts elements of GEN and
+returns a new generator.  (BIND! FN GEN) returns a generator that is
+equivalent to (FUNCALL #'CONCAT! (MAP! FN GEN))
+
+That is it generates each element of (FN X) for each X in GEN. 
+
+BIND! MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
   (let ((orig-fn (next-fn gen))
         (orig-p (next-p-fn gen))
         (orig-state (gen-state gen)))
@@ -165,6 +206,13 @@
 
 
 (defun concat! (gen &rest gens)
+  "Returns a generator that is the concatenation of the generators
+passed as arguments. 
+
+Each of the arguments to CONCAT! must be different. If any compare
+EQL, an error will be signalled. 
+
+CONCAT! MODIFIES AND RETURNS ITS FIRST ARGUMENT."
   (assert (all-different (list* gen gens)))
   (bind! #'identity (seq (list* gen gens))))
 
@@ -176,6 +224,28 @@
 ;;; CONSUMERS
 
 (defmacro iter ((var-exp gen) &body body)
+  "The basic generator consumer. 
+
+VAR-EXP can be either a symbol, or a form sutible for using as the
+binding form in DESTRUCTURING-BIND.
+
+GEN is an expression that should evaluate to a generator. 
+
+BODY is any form you like, it will be evaluated for each value
+procuded by GEN.
+
+Example:
+
+(iter ((x y) (zip! (repeater 'a 'b 'c) (times 5)))
+  (format t \"~a -- ~a~%\" x y))
+
+A -- 0
+B -- 1
+A -- 2
+B -- 3
+A -- 4
+B -- 5
+"
   (let* ((gen-var (gensym "generator!"))
          (expr-body (if (consp var-exp)
                        `(destructuring-bind ,var-exp (next ,gen-var) ,@body)
@@ -186,27 +256,64 @@
           :do
             ,expr-body))))
 
-(defmacro fold ((fold-var init-val) (var-exp gen) expr)
-  `(let ((,fold-var ,init-val))
+(defmacro fold ((acc init-val) (var-exp gen) expr)
+  "The accumulating generator consumer.
+
+ACC is a symbol and INIT-VAL is any lisp expression.  ACC is where
+intermediate results are accmulated. INIT-VAL is evaluated to
+initialize the value of ACC.
+
+VAR-EXP can be either a symbol, or a form sutible for using as the
+binding form in DESTRUCTURING-BIND. 
+
+GEN is an expression that should evaluate to a generator. 
+
+EXPR is a sigle lisp expression whose value is bound to ACC on each
+iteration.  
+
+When iteration has concluded, ACC becomes the value of the FOLD form.
+
+Example:
+
+> (fold (sum 0) (x (times 10)) (+ sum x))
+
+55
+
+Example: 
+
+> (fold (acc 0) 
+        ((x y) (zip! (times 10) (range :by -1)))
+        (sqrt (+ acc (* x y))))
+
+#C(0.4498776 9.987898)
+
+ "
+  `(let ((,acc ,init-val))
      (iter (,var-exp ,gen)
-       (setf ,fold-var ,expr))
-     ,fold-var))
+       (setf ,acc ,expr))
+     ,acc))
+
 
 (defun collect (gen)
+  "Consumes GEN by collecting its values into a list."
   (nreverse (fold (xs nil) (x gen) (cons x xs))))
 
 (defun size (gen)
+  "Consumes GEN by calculating its size."
   (fold (n 0) (x gen) (1+ n)))
 
 (defun maximum (gen)
+  "Consumes GEN, returning its maximum value."
   (fold (m nil) (x gen)
         (if m (max m x) x)))
 
 (defun minimum (gen)
+  "Consumes GEN, returning its minimum value."
   (fold (m nil) (x gen)
         (if m (min m x) x)))
 
 (defun average (gen)
+  "Consumes GEN, returning its average value."
   (let ((sum 0)
         (count 0))
     (iter (x gen)
@@ -215,6 +322,8 @@
     (/ sum count)))
 
 (defun argmax (fn gen)
+  "Consumes GEN. Returns a pair (X . VALUE) such that (FUNCALL FN X)
+is maximal among the values of GEN.  VALUE is the value of (FUNCALL FN X)"
   (fold (am nil)
         (arg gen)
         (let ((val (funcall fn arg)))
@@ -223,6 +332,8 @@
               am))))
 
 (defun argmin (fn gen)
+    "Consumes GEN. Returns a pair (X . VALUE) such that (FUNCALL FN X)
+is minimal among the values of GEN.  VALUE is the value of (FUNCALL FN X)"
   (fold (am nil)
         (arg gen)
         (let ((val (funcall fn arg)))
