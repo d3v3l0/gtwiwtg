@@ -24,7 +24,7 @@
            #:merge!
            #:skip!
            #:skip-while!
-           #:iter
+           #:for
            #:fold
            #:collect
            #:take
