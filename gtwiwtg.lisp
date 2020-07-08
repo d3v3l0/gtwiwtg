@@ -41,12 +41,37 @@
 
 ;;; CONSTRUCTORS
 
-(defun range (&key (from 0) to (by 1))
+(defun range (&key (from 0) to (by 1) inclusive)
   "Create a generator that produces a series of numbers between FROM
-and TO, inclusive, with step size of BY.
+and TO with step size of BY.
 
-If TO is NIL, then the generator produces an infinite sequence."
-  (let ((comparator (if (plusp by) #'< #'>)))
+When INCLUSIVE is non NIL, then TO will be produced by the generator
+if it would be the last member of generate series.  
+
+E.g. 
+
+> (collect (range :to 10))
+ 
+ (0 1 2 3 4 5 6 7 8 9) 
+
+> (collect (range :to 10 :inclusive t))
+
+ (0 1 2 3 4 5 6 7 8 9 10)
+
+> (collect (range :to 10 :by 2 :inclusive t))
+
+ (0 2 4 6 8 10)
+
+> (collect (range :to 10 :by 3 :inclusive t))
+
+ (0 3 6 9)
+
+If TO is NIL, then the generator produces an infinite sequence.
+
+"
+  (let ((comparator (if (plusp by)
+                        (if inclusive #'<= #'<)
+                        (if inclusive #'>= #'>))))
     (make-instance 'generator!
                    :state (list (- from by) to)
                    :next-p-fn (lambda (state) (or (not to)
@@ -435,7 +460,7 @@ also be sorted according to COMPARATOR.
 
 The generator created through a merge has a length that is maximal
 among the lengths of the arguments to MERGE!. Hence, if any of the
-arguments is an infinite generator, then the merged generator is also
+arguments is an infinite generator, then the new generator is also
 infinite.
 
 An example:
