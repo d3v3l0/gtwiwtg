@@ -36,6 +36,9 @@
   (with-slots (next-p-fn state) gen
     (funcall next-p-fn state)))
 
+
+(defun make-dirty (g) (setf (dirty-p g) t))
+
 ;;; CONSTRUCTORS
 
 (defun range (&key (from 0) to (by 1))
@@ -104,6 +107,7 @@ resume when the \"sub iteration\" finishes.
 It is kind of dark magic, and so I don't recommend using it except in
 the rareest of circumstances."
   (assert (not (eq gen1 gen2)))
+  (make-dirty gen2)
   (let ((orig-pred (next-p-fn gen1))
         (orig-fn (next-fn gen1)))
     (with-slots ((s1 state) (p1 next-p-fn) (f1 next-fn)) gen1
@@ -135,6 +139,8 @@ THIS FUNCTION MODIFIES AND RETURNS ITS FIRST GENERATOR ARGUMENT.
 Also, all of the generators must be different from one another. If any
 compare EQL then an error is signaled."
   (assert (all-good (list* gen gens)))
+  (dolist (g gens) (make-dirty g)) ;; to ensure gens wont be re-used after use here.
+  
   (let ((orig-fns (mapcar #'next-fn (cons gen gens)))
         (orig-preds (mapcar #'next-p-fn (cons gen gens))))
     (setf (gen-state gen) (mapcar #'gen-state (cons gen gens))
@@ -227,6 +233,7 @@ EQL, an error will be signalled.
 
 CONCAT! MODIFIES AND RETURNS ITS FIRST ARGUMENT."
   (assert (all-good (list* gen gens)))
+  (dolist (g gens) (make-dirty g)) ;; to help ensure that gens can be combined elsewhere
   (bind! #'identity (seq (list* gen gens))))
 
 (defun zip! (gen &rest gens)
