@@ -551,7 +551,7 @@ B -- 1
 A -- 2
 B -- 3
 A -- 4
-B -- 5
+
 "
   (let* ((gen-var (gensym "generator!"))
          (expr-body (if (consp var-exp)
@@ -584,7 +584,7 @@ Example: standard summing
 
 > (fold (sum 0) (x (times 10)) (+ sum x))
 
-55
+45
 
 Example: a usless calculation
 
@@ -620,7 +620,7 @@ Example: building data
 
 (defun take (n gen)
   "Consumes GEN by collecting its first N values into a list"
-  (nreverse (fold (xs nil) (x (zip! gen (times (1- n))))
+  (nreverse (fold (xs nil) (x (zip! gen (times n)))
                   (cons (car x) xs))))
 
 (defun pick-out (indexes gen)
@@ -631,7 +631,7 @@ INDEXES is a list of non-negative integers.
 Returns a list of values from GEN such that each value was an element
 of indexes."
   (let ((acc (make-array (length indexes))))
-    (iter ((x idx) (zip! gen (times (apply #'max indexes))))
+    (iter ((x idx) (zip! gen (times (1+ (apply #'max indexes)))))
       (when (member idx indexes)
         (loop
            :for i :below (length  indexes)
