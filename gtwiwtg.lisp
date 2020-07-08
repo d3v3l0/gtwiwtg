@@ -96,21 +96,37 @@ the values passed as ARGS looped forever."
                             (values (random arg) nil))))
 
 
-(defun from-thunk (thunk &optional times)
-  "Creates a generator that produces an inifinte series of values that
-are the return value of (FUNCALL THUNK)
 
-If TIMES is supplied, THUNK will only be called TIMES times."
-  (let ((thunk-proxy (lambda (ignore) (declare (ignore ignore)) (funcall thunk))))
-    (map! thunk-proxy (range :to (when times (1- times))))))
 
-(defun from-thunk-until (thunk until)
+(defun from-thunk-until (thunk &optional (until (constantly nil)))
+  "Creates a generator that produces a series of value by successively
+calling (FUNCALL THUNK).  The iterator stops whenever (FUNCALL UNTIL)
+is non null.
+
+By default, UNTIL is the function (CONSTANTLY NIL). I.e. it will
+generate forever."
   (make-instance 'generator!
                  :state nil
                  :next-p-fn (lambda (ignore) (declare (ignore ignore)) (not (funcall until)))
                  :next-fn (lambda (ignore)
                             (declare (ignore ignore))
                             (values (funcall thunk) nil))))
+
+
+(defun from-thunk (thunk)
+  "Creates a generator that produces an inifinte series of values that
+are the return value of (FUNCALL THUNK). 
+
+If you need to create a stopping condition on your thunk-backed
+generator, see FROM-THUNK-UNTIL."
+  (from-thunk-until thunk))
+
+
+(defun from-thunk-times (thunk times)
+  "Creates a generator that produces its values by calling 
+  (FUNCALL THUNK) exactly TIMES times."
+  (let ((thunk-proxy (lambda (ignore) (declare (ignore ignore)) (funcall thunk))))
+    (map! thunk-proxy (times times))))
 
 (defun from-recurrence (rec n-1 &rest n-m)
   "Creates a generator from a recurrence relation.

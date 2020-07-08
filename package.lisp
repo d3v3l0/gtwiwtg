@@ -9,6 +9,7 @@
            #:noise
            #:from-thunk
            #:from-thunk-until
+           #:from-thunk-times
            #:from-recurrence
            #:from-input-stream
            #:file-lines
