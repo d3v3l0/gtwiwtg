@@ -102,6 +102,14 @@ If TIMES is supplied, THUNK will only be called TIMES times."
   (let ((thunk-proxy (lambda (ignore) (declare (ignore ignore)) (funcall thunk))))
     (map! thunk-proxy (range :to (when times (1- times))))))
 
+(defun from-thunk-until (thunk until)
+  (make-instance 'generator!
+                 :state nil
+                 :next-p-fn (lambda (ignore) (declare (ignore ignore)) (not (funcall until)))
+                 :next-fn (lambda (ignore)
+                            (declare (ignore ignore))
+                            (values (funcall thunk) nil))))
+
 (defun from-recurrence (rec n-1 &rest n-m)
   "Creates a generator from a recurrence relation.
 
@@ -399,6 +407,26 @@ CONCAT! MODIFIES AND RETURNS ITS FIRST ARGUMENT."
 
 
 
+
+(defun merge! (comparator gen1 gen2 &rest gens)
+  (let ((all-gens (list* gen1 gen2 gens)))
+
+    (assert (all-good all-gens))
+    (dolist (g all-gens) (make-dirty g))
+
+    (from-thunk-until
+     (lambda ()
+       (let ((vals (mapcar #'next all-gens)))
+         (setq vals (sort vals comparator))
+
+         (setf all-gens
+               (delete-if-not #'has-next-p
+                              (nconc (when (cdr vals) (list (seq (cdr vals))))
+                                     all-gens)))
+         (car vals)))
+     (lambda ()
+       (null all-gens)))))
+
 ;;; CONSUMERS
 
 (defmacro iter ((var-exp gen) &body body)
@@ -589,3 +617,9 @@ Not meant for general use. just a utility used by THREAD-THROUGH"
 
 (defun all-primes ()
   (filter! #'prime-p (range :from 1)))
+
+
+;; merge-sort
+
+(defun gen-sort (seq)
+  ())

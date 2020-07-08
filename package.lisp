@@ -8,6 +8,7 @@
            #:repeater
            #:noise
            #:from-thunk
+           #:from-thunk-until
            #:from-recurrence
            #:from-input-stream
            #:file-lines
@@ -19,6 +20,7 @@
            #:inflate!
            #:concat!
            #:zip!
+           #:merge!
            #:iter
            #:fold
            #:collect
