@@ -344,9 +344,13 @@ of the source generators runs out of arguments to pass to
 MAP-FN. I.e. The mapped generator is as long as the shortest argument
 generators.
 
-THIS FUNCTION MODIFIES AND RETURNS ITS FIRST GENERATOR ARGUMENT.
-Also, all of the generators must be different from one another. If any
-compare EQL then an error is signaled."
+Error Conditions:
+ - If any of the generators compare EQL an error will be signalled
+ - If any of the generators have been used elsewhere, an error will be signalled.
+
+Caveat: 
+ - This function modifies and returns its first generator argument.
+"
   (assert (all-good (list* gen gens)))
   (dolist (g gens) (make-dirty g)) ;; to ensure gens wont be re-used after use here.
 
@@ -376,7 +380,13 @@ compare EQL then an error is signaled."
   "Produces a generator that filters out members of GEN that are NIL
 when applied to PRED.
 
-THIS FUNCTION MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
+Error Condition:
+ - If GEN has been used elsewhere, an error will be signalled.
+
+Caveat:
+ - This function modifies and returns its generator argument.
+
+"
   (assert (not (dirty-p gen)))
   (let* ((orig-fn (next-fn gen))
          (orig-p-fn (next-p-fn gen))
@@ -424,8 +434,12 @@ Here is an example:
   :OCCUPATION \"rocker\" 
   :HOBBIES (\"neuroscience\" \"particle physics\" \"piloting fighter jets\"))
 
+Error Conditions:
+ - If GEN has been used elsewhere, an error will be signalled.
+
 Caveat: 
-INFLATE! MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
+ - INFLATE! Modifies and returns its generator argument.
+"
   (assert (not (dirty-p gen)))
   (let ((orig-fn (next-fn gen))
         (orig-p (next-p-fn gen))
@@ -453,12 +467,19 @@ passed as arguments.
 Each of the arguments to CONCAT! must be different. If any compare
 EQL, an error will be signalled.
 
-CONCAT! MODIFIES AND RETURNS ITS FIRST ARGUMENT."
+Error Conditions:
+ - If any of the generators compare EQL, an error will be signalled.
+ - If any of the generators has been used elsewhere, an error will be sigalled.
+
+Caveat: 
+ - CONCAT! Modifies and returns its first argument.
+"
   (assert (all-good (list* gen gens)))
   (dolist (g gens) (make-dirty g)) ;; to help ensure that gens can be combined elsewhere
   (inflate! #'identity (seq (list* gen gens))))
 
 (defun zip! (gen &rest gens)
+  "Is a shortcut for (MAP! #'LIST GEN1 GEN2 ...)"
   (apply #'map! #'list gen gens))
 
 
@@ -485,7 +506,9 @@ An example:
 
  (-10 -4 0 1 2 2 3 4 6 8 8 14 20 26)
 
-WARNING: IF ANY OF THE GENERATORS COMPARE EQL, AN ERROR WILL BE SIGNALLED.
+Error Conditions:
+ - If any of the generators compare EQL, an error will be signalled.
+ - If any of the generators have been used elsewhere, an errror will be signalled.
 "
   (let ((all-gens (list* gen1 gen2 gens)))
 
