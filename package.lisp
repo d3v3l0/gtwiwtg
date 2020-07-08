@@ -9,7 +9,7 @@
            #:yield-to!
            #:map!
            #:filter!
-           #:bind!
+           #:inflate!
            #:concat!
            #:zip!
            #:iter

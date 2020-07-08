@@ -196,14 +196,14 @@ THIS FUNCTION MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
     gen))
 
 
-(defun bind! (fn gen)
+(defun inflate! (fn gen)
   "FN is expected to be a function that accepts elements of GEN and
-returns a new generator.  (BIND! FN GEN) returns a generator that is
+returns a new generator.  (INFLATE! FN GEN) returns a generator that is
 equivalent to (FUNCALL #'CONCAT! (MAP! FN GEN))
 
 That is it generates each element of (FN X) for each X in GEN. 
 
-BIND! MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
+INFLATE! MODIFIES AND RETURNS ITS GENERATOR ARGUMENT."
   (assert (not (dirty-p gen)))
   (let ((orig-fn (next-fn gen))
         (orig-p (next-p-fn gen))
@@ -234,7 +234,7 @@ EQL, an error will be signalled.
 CONCAT! MODIFIES AND RETURNS ITS FIRST ARGUMENT."
   (assert (all-good (list* gen gens)))
   (dolist (g gens) (make-dirty g)) ;; to help ensure that gens can be combined elsewhere
-  (bind! #'identity (seq (list* gen gens))))
+  (inflate! #'identity (seq (list* gen gens))))
 
 (defun zip! (gen &rest gens)
   (apply #'map! #'list gen gens))
@@ -393,4 +393,4 @@ Not meant for general use. just a utility used by THREAD-THROUGH"
                                          :displaced-to vec
                                          :displaced-index-offset 1
                                          :element-type (array-element-type vec)))))
-        (bind! (lambda (subperm) (thread-through elem subperm)) subperms))))
+        (inflate! (lambda (subperm) (thread-through elem subperm)) subperms))))
