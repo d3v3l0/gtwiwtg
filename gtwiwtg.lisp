@@ -592,7 +592,7 @@ Example: a usless calculation
         ((x y) (zip! (times 10) (range :by -1)))
         (sqrt (+ acc (* x y))))
 
-#C(0.4498776 9.987898)
+ #C(0.444279 8.986663)
 
 Example: building data 
 
@@ -682,54 +682,5 @@ is minimal among the values of GEN.  VALUE is the value of (FUNCALL FN X)"
           (if (or (not am) (< val (cdr am)))
               (cons arg val)
               am))))
-
-
-;;; EXAMPLES
-
-
-;; permutations
-
-(defun fill-and-insert (idx elem vec buffer)
-  "A Utility function that inserts ELEM at IDX into BUFFER. For every
-other space in BUFFER, the lements of VEC are inserted in order.
-
-Implicity expects (= (LENGTH BUFFER) (1+ (LENGTH VEC)))
-
-Not meant for general use. just a utility used by THREAD-THROUGH"
-  (loop :for i :below (length buffer)
-     :when (= i idx) :do (setf (aref buffer idx) elem)
-     :when (< i idx) :do (setf (aref buffer i)
-                               (aref vec i))
-     :when (> i idx) :do (setf (aref buffer i)
-                               (aref vec (1- i))))  )
-
-(defun thread-through (elem vec)
-  (let ((buffer (concatenate 'vector vec (list elem)))) ;; reusable buffer
-    (map! (lambda (idx)
-            (fill-and-insert idx elem vec buffer)
-            buffer)
-          (range :from 0 :to (length vec)))))
-
-
-(defun perms (vec)
-  (if (= 1 (length vec)) (seq (list vec))
-      (let ((elem (elt vec 0))
-            (subperms (perms (make-array (1- (length vec))
-                                         :displaced-to vec
-                                         :displaced-index-offset 1
-                                         :element-type (array-element-type vec)))))
-        (inflate! (lambda (subperm) (thread-through elem subperm)) subperms))))
-
-
-;; primes
-
-(defun prime-p (n)
-  (loop
-     :for x :from 2 :upto (sqrt n)
-     :when (zerop (mod n x)) :do (return nil)
-     :finally (return t)))
-
-(defun all-primes ()
-  (filter! #'prime-p (range :from 1)))
 
 
