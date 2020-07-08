@@ -7,6 +7,12 @@
            #:seq
            #:repeater
            #:noise
+           #:from-thunk
+           #:from-recurrence
+           #:from-input-stream
+           #:file-lines
+           #:file-chars
+           #:file-bytes
            #:yield-to!
            #:map!
            #:filter!
