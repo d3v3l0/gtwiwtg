@@ -22,6 +22,8 @@
            #:concat!
            #:zip!
            #:merge!
+           #:skip!
+           #:skip-while!
            #:iter
            #:fold
            #:collect

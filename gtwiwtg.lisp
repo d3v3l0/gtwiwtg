@@ -483,8 +483,6 @@ Caveat:
   (apply #'map! #'list gen gens))
 
 
-
-
 (defun merge! (comparator gen1 gen2 &rest gens)
   "Emulates the behavior of MERGE (in the ANSI standard), but for generators.
 
@@ -527,6 +525,26 @@ Error Conditions:
          (car vals)))
      (lambda ()
        (null all-gens)))))
+
+
+(defun skip! (n gen)
+  "Returns the generator GEN but without the first N elements. 
+
+An error will be signalled if GEN does hot have N ore more elements."
+  (dotimes (x n) (next gen))
+  (setf (slot-value gen 'dirty-p) nil)
+  gen)
+
+(defun skip-while! (pred gen)
+  "Returns the generator GEN but without the first N elements for
+which PRED is non-nil. 
+
+An error will be signalled if GEN runs out of elements before PRED
+returns NIL."
+  (loop :while (funcall pred (next gen)))
+  (setf (slot-value gen 'dirty-p) nil)
+  gen)
+
 
 ;;; CONSUMERS
 
