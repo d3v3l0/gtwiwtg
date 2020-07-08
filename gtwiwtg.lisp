@@ -32,8 +32,7 @@
   (with-slots (next-p-fn state) gen
     (funcall next-p-fn state)))
 
-(defun times (n)
-  (range :to n))
+;;; CONSTRUCTORS
 
 (defun range (&key (from 0) to (by 1))
   (make-instance 'generator!
@@ -44,6 +43,9 @@
                             (incf (car state) by)
                             (values (car state) state))))
 
+(defun times (n)
+  (range :to n))
+
 (defun seq (sequence)
   (make-instance 'generator!
                  :state 0
@@ -53,8 +55,24 @@
                             (let ((val (elt sequence state)))
                               (values val (1+ state))))))
 
+(defun repeater (&rest args)
+  (make-instance 'generator!
+                 :state (copy-list args)
+                 :next-p-fn (constantly t)
+                 :next-fn (lambda (state)
+                            (if (cdr state)
+                                (values (car state) (cdr state))
+                                (values (car args) (copy-list (cdr args)))))))
+
+;;; Some utilities
+
+(defun all-different (things)
+  (= (length things) (length (remove-duplicates things))))
+
+;;; MODIFIERS and COMBINATORS
 
 (defmethod yield-to! (gen1 gen2)
+  (assert (not (eq gen1 gen2)))
   "Gen1 passes generation control to gen2. This control will be return
   to gen1 after gen2 is done. Returns a new generator!. "
   (let ((orig-pred (next-p-fn gen1))
@@ -75,6 +93,7 @@
 
 
 (defun map! (map-fn gen &rest gens)
+  (assert (all-different (list* gen gens)))
   (let ((orig-fns (mapcar #'next-fn (cons gen gens)))
         (orig-preds (mapcar #'next-p-fn (cons gen gens))))
     (setf (gen-state gen) (mapcar #'gen-state (cons gen gens))
@@ -145,35 +164,16 @@
   gen)
 
 
+(defun concat! (gen &rest gens)
+  (assert (all-different (list* gen gens)))
+  (bind! #'identity (seq (list* gen gens))))
 
-(defun thread-through (elem vec)
-  (let ((target (concatenate 'vector vec (list elem)))) ;; reusable buffer
-    (flet ((fill-and-insert (idx) ;; inserts elem into target at idx,
-                                  ;; fills rest with vec
-             (loop :for i :below (length target)
-                :when (= i idx) :do (setf (aref target idx) elem)
-                :when (< i idx) :do (setf (aref target i)
-                                          (aref vec i))
-                :when (> i idx) :do (setf (aref target i)
-                                          (aref vec (1- i))))))
-      (map! (lambda (idx)
-              (fill-and-insert idx)
-              target)
-            (range :from 0 :to (length vec))))))
+(defun zip! (gen &rest gens)
+  (apply #'map! #'list gen gens))
 
 
-(defun perms (vec)
-  "Low memory generator! for all permutations of VEC. Generates the
-permutations one at a time."
-  (if (= 1 (length vec)) (seq (list vec))
-      (let ((elem (elt vec 0))
-            (subperms (perms (make-array (1- (length vec))
-                                         :displaced-to vec
-                                         :displaced-index-offset 1
-                                         :element-type (array-element-type vec)))))
-        (bind! (lambda (subperm) (thread-through elem subperm)) subperms))))
 
-
+;;; CONSUMERS
 
 (defmacro iter ((var-exp gen) &body body)
   (let* ((gen-var (gensym "generator!"))
@@ -193,4 +193,73 @@ permutations one at a time."
      ,fold-var))
 
 (defun collect (gen)
-  (nreverse (fold-into (xs nil) (x gen) (cons x xs))))
+  (nreverse (fold (xs nil) (x gen) (cons x xs))))
+
+(defun size (gen)
+  (fold (n 0) (x gen) (1+ n)))
+
+(defun maximum (gen)
+  (fold (m nil) (x gen)
+        (if m (max m x) x)))
+
+(defun minimum (gen)
+  (fold (m nil) (x gen)
+        (if m (min m x) x)))
+
+(defun average (gen)
+  (let ((sum 0)
+        (count 0))
+    (iter (x gen)
+      (incf sum x)
+      (incf count))
+    (/ sum count)))
+
+(defun argmax (fn gen)
+  (fold (am nil)
+        (arg gen)
+        (let ((val (funcall fn arg)))
+          (if (or (not am) (> val (cdr am)))
+              (cons arg val)
+              am))))
+
+(defun argmin (fn gen)
+  (fold (am nil)
+        (arg gen)
+        (let ((val (funcall fn arg)))
+          (if (or (not am) (< val (cdr am)))
+              (cons arg val)
+              am))))
+
+
+;;; example
+
+(defun fill-and-insert (idx elem vec buffer)
+  "A Utility function that inserts ELEM at IDX into BUFFER. For every
+other space in BUFFER, the lements of VEC are inserted in order.
+
+Implicity expects (= (LENGTH BUFFER) (1+ (LENGTH VEC))) 
+
+Not meant for general use. just a utility used by THREAD-THROUGH"
+  (loop :for i :below (length buffer)
+     :when (= i idx) :do (setf (aref buffer idx) elem)
+     :when (< i idx) :do (setf (aref buffer i)
+                               (aref vec i))
+     :when (> i idx) :do (setf (aref buffer i)
+                               (aref vec (1- i))))  )
+
+(defun thread-through (elem vec)
+  (let ((buffer (concatenate 'vector vec (list elem)))) ;; reusable buffer
+    (map! (lambda (idx)
+            (fill-and-insert idx elem vec buffer)
+            buffer)
+          (range :from 0 :to (length vec)))))
+
+
+(defun perms (vec)
+  (if (= 1 (length vec)) (seq (list vec))
+      (let ((elem (elt vec 0))
+            (subperms (perms (make-array (1- (length vec))
+                                         :displaced-to vec
+                                         :displaced-index-offset 1
+                                         :element-type (array-element-type vec)))))
+        (bind! (lambda (subperm) (thread-through elem subperm)) subperms))))
