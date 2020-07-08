@@ -175,10 +175,13 @@ But this isn't:
                                     (values nil stream)))))))
 
 
-(defun file-lines (path)
+(defun file-lines (file)
   "Creates a generator that produces the lines of a file.  The stream
 to the file is closed when the generator finishes.
 
+FILE is either a path to a file, or is an open character input stream
+to a file.
+
 Returns NIL on the last iteration.
 
 Avoid using with TAKE or PICK-OUT as the file stream will not be closed.
@@ -190,13 +193,16 @@ within an UNWIND-PROTECTing form such as WITH-OPEN-FILE.
 See the documentation for FROM-INPUT-STREAM for an example of the
 distinction.
 "
-  (from-input-stream (open path)
+  (from-input-stream (if (streamp file) file (open file))
                      (lambda (stream) (read-line stream nil nil))))
 
-(defun file-chars (path)
+(defun file-chars (file)
   "Creates a generator that produces the characters of a file. The
 stream to the file is closed when the generator finishes.
 
+FILE is either a path to a file, or is an open character input stream
+to a file.
+
 Returns NIL on the last iteration.
 
 Avoid using with TAKE or PICK-OUT as the file stream will not be closed.
@@ -209,13 +215,16 @@ See the documentation for FROM-INPUT-STREAM for an example of the
 distinction.
 
 "
-  (from-input-stream (open path)
+  (from-input-stream (if (streamp file) file (open file))
                      (lambda (stream) (read-char stream nil nil))))
 
-(defun file-bytes (path)
+(defun file-bytes (file)
   "Creates a generator that produces the bytes of a file. The
 stream to the file is closed when the generator finishes.
 
+FILE is either a path to a file, or is an open byte input stream to a
+file.
+
 Returns NIL on the last iteration.
 
 Avoid using with TAKE or PICK-OUT as the file stream will not be closed.
@@ -226,9 +235,9 @@ within an UNWIND-PROTECTing form such as WITH-OPEN-FILE.
 
 See the documentation for FROM-INPUT-STREAM for an example of the
 distinction.
-
 "
-  (from-input-stream (open path :element-type '(unsigned-byte 8))
+  (from-input-stream (if (streamp file) file
+                         (open file :element-type '(unsigned-byte 8)))
                      (lambda (stream) (read-byte stream nil nil))))
 
 ;;; Some utilities
