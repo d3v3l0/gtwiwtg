@@ -548,7 +548,7 @@ returns NIL."
 
 ;;; CONSUMERS
 
-(defmacro for ((var-exp gen) &body body)
+(defmacro for (var-exp gen &body body)
   "The basic generator consumer.
 
 VAR-EXP can be either a symbol, or a form sutible for using as the
@@ -561,7 +561,7 @@ procuded by GEN.
 
 Example:
 
-(for ((x y) (zip! (repeater 'a 'b 'c) (times 5)))
+(for (x y) (zip! (repeater 'a 'b 'c) (times 5))
   (format t \"~a -- ~a~%\" x y))
 
 A -- 0
@@ -627,7 +627,7 @@ Example: building data
 
  "
   `(let ((,acc ,init-val))
-     (for (,var-exp ,gen)
+     (for ,var-exp ,gen
        (setf ,acc ,expr))
      ,acc))
 
@@ -649,7 +649,7 @@ INDEXES is a list of non-negative integers.
 Returns a list of values from GEN such that each value was an element
 of indexes."
   (let ((acc (make-array (length indexes))))
-    (for ((x idx) (zip! gen (times (1+ (apply #'max indexes)))))
+    (for (x idx) (zip! gen (times (1+ (apply #'max indexes))))
       (when (member idx indexes)
         (loop
            :for i :below (length  indexes)
@@ -676,7 +676,7 @@ of indexes."
   "Consumes GEN, returning its average value."
   (let ((sum 0)
         (count 0))
-    (for (x gen)
+    (for x gen
       (incf sum x)
       (incf count))
     (/ sum count)))
