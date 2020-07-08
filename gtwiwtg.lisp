@@ -82,6 +82,17 @@ the values passed as ARGS looped forever."
                                 (values (car state) (cdr state))
                                 (values (car args) (copy-list (cdr args)))))))
 
+
+(defun noise (&optional (arg 1.0))
+  "Creates a generator that produces an infinite series of random
+  numbers that are the result of calling (RANDOM ARG)."
+  (make-instance 'generator!
+                 :state nil
+                 :next-p-fn (constantly t)
+                 :next-fn (lambda (state)
+                            (declare (ignore state))
+                            (values (random arg) nil))))
+
 ;;; Some utilities
 
 (defun all-different (things)

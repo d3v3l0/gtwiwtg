@@ -6,6 +6,7 @@
            #:times
            #:seq
            #:repeater
+           #:noise
            #:yield-to!
            #:map!
            #:filter!
