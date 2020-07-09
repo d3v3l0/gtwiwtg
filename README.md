@@ -448,7 +448,7 @@ built using `for` and `fold`. They are:
 The `pick-out` consumer is interesting enough to see a quick example of:
 
 ``` lisp
-;; pick out the first and fourth character 
+;; pick out characters and index 1 and index 4
 > (pick-out '(1 4) (seq "generators"))
 (#\e #\r)
 
