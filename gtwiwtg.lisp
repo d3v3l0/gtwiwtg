@@ -166,7 +166,7 @@ should be K, the number of arguments acepted by REC.
 
 Example
 
-> (let ((fibs (from-recurrence (lambda (n-1 n-2) (+ n-1 n-2)) 0 1)))
+> (let ((fibs (from-recurrence (lambda (n-1 n-2) (+ n-1 n-2)) 1 0)))
      (take 10 fibs))
 
 (1 1 2 3 5 8 13 21 34 55)
@@ -490,10 +490,9 @@ The emulation is not perfect, but it holds in the following sense: If
 all the inputs are sorted according to COMPARATOR then the output will
 also be sorted according to COMPARATOR.
 
-The generator created through a merge has a length that is maximal
-among the lengths of the arguments to MERGE!. Hence, if any of the
-arguments is an infinite generator, then the new generator is also
-infinite.
+The generator created through a merge has a length that is the sum of
+the lengths of the arguments to MERGE!. Hence, if any of the arguments
+is an infinite generator, then the new generator is also infinite.
 
 An example:
 
