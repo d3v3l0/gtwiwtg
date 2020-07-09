@@ -183,7 +183,7 @@ Here is a brief listing of the other generator constructors in GTWIWTG:
 - `(file-chars file)` a file-backed generator. Produces characters from that file.
 - `(file-bytes file)` a file-backed generator. Produces bytes from that file.
 
-You'll see some of these in action when you reach the examples section below.
+You can see some of these in action in the examples section at the top of this document.
 
 ### The Combination and Transformation Functions
 
