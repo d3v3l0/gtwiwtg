@@ -564,6 +564,18 @@ returns NIL."
 
 
 (defun nfurcate! (count gen)
+  "EXERIMENTAL. MAY BE REMOVED
+
+Return a list of COUNT copies of GEN.
+
+Caveat: 
+
+ - The generators produced by NFURCATE! allocate new memory as you
+   consume them. This allocation can be O(COUNT * SIZE) in space
+   complexity, where SIZE is the size of GEN. Hence, use with caution
+   on infinite generators.
+
+"
   (make-dirty gen)
   (let ((qs (loop :for _ :below count :collect (make-queue))))
     (loop :for build-q :in qs
@@ -586,6 +598,23 @@ returns NIL."
                    (queue-empty-p local-q))))))))
 
 (defun partition! (pred gen)
+  "EXPERIMENTAL. MAY BE REMOVED. 
+
+Return a list of two generators that looks like (PASSING FAILING)
+
+PASSING is a generator that produces the values of GEN that pass the
+predicate PRED 
+
+FAILING is a generator that produces the values of GEN that do not
+pass the predicate PRED
+
+Caveat: 
+
+ - The generators produced by PARTITION! allocate new memory as you
+   consume them. This allocation may be O(2 * SIZE) in space
+   complexity, where SIZE is the size of GEN. Hence, use with caution
+   on infinite generators.
+"
   (destructuring-bind (gen1 gen2) (nfurcate! 2 gen)
     (list (filter! pred gen1)
           (filter! (complement pred) gen2))))
