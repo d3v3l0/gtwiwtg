@@ -159,17 +159,19 @@ Here is a brief listing of the other generator constructors in GTWIWTG:
 - `(file-chars file)` a file-backed generator. Produces characters from that file.
 - `(file-bytes file)` a file-backed generator. Produces bytes from that file.
 
-You'll some of these in action when you reach the examples section below.
+You'll see some of these in action when you reach the examples section below.
 
 ### The Combination and Transformation Functions
 
 You can create more intersting and more specific generators by using a
-few higher-order functions to transform generator into other
-generators. These transformations are desirable because they can be
-performed before any elements are produced by any of the generators
-involved.  That is, if you think of a generator as a computation that
-produces a series of values, then transformation functions allow you
-to incrementally "build up" a desired computation before it is run.
+few higher-order functions to transform combine and transform simple generators.
+
+These transformations are desirable because they can be performed
+before any elements are produced.
+
+That is, if you think of a generator as a computation that produces a
+series of values, then transformation functions allow you to
+incrementally "build up" a desired computation before it is run.
 
 The three core transformation functions are:
 
