@@ -565,7 +565,7 @@ returns NIL."
 
 (defun nfurcate! (count gen)
   (make-dirty gen)
-  (let ((qs (loop :for _ :below count-if :collect (make-queue))))
+  (let ((qs (loop :for _ :below count :collect (make-queue))))
     (loop :for build-q :in qs
        :collect
          (let ((local-q build-q))
