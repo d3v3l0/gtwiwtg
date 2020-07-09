@@ -5,9 +5,9 @@
 A naive generator library that doesn't use fancy pants concepts like
 first class continuations.
 
-GTWIWTG is meant to be a small, explorable, and understandable
-library. The source code is meant to be readible and easy to
-follo.
+The GTWIWTG library is meant to be small, explorable, and understandable.
+The source code is meant to be readible and easy to
+follow.
 
 Every symbol exported from the `GTWIWTG` package has a useful
 docstring. Many docstrings include examples of use.
@@ -26,8 +26,7 @@ docstring. Many docstrings include examples of use.
 ## Motivating Examples
 
 Here's some code to show you what you can do.  A more involved example
-for efficient permutations generation appears at the end of this
-document.
+apears at the end of the document, following the tutorial.
 
 ### All The Primes
 
@@ -68,17 +67,14 @@ document.
     
 ## Tutorial
 
-GTWIWTG is a tiny library for creating and using generators. If you've
-never heard of generators beforeq, a generator is an object that can
-produce a series of values, one value at a time.  Generators are
-convenient when you want to deal with a series of values that you do
-not want to store in memory at any one time. 
+GTWIWTG is a tiny library for creating and using generators. 
 
-For example, if you're generating permutations of strings (as we will
-do in this tutorial), you may not want to store all of those
-permutations in memory in the course of generating them. For example,
-generating all permutations of "generators are cool" would easily overflow
-the heap if you were to keep them in a list or array.
+If you have never heard of generators before, let offer a definition.
+
+A generator is an object that can produce a series of values, one
+value at a time.  Generators sometimes convenient when you want to
+deal with series that are too long to fit into memory. They also help
+when you want to generate sequential data using functions.
 
 ### Three Kinds Of Function 
 
@@ -86,7 +82,7 @@ In GTWIWTG, there are functions that *construct* generators, functions
 that *combine* generators, and functions and macros that *consume*
 generators. 
 
-### The Constructors 
+### The Breadwinning Constructors 
 
 The two most common generator constructors are:
 
