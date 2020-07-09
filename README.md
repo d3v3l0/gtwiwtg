@@ -365,10 +365,10 @@ Here is an example to show you the illegal behavior:
 ```
 
 The gist is that we tried to zip a generator with itself. Such
-behavior is not allowed. Generally speaking, if you passed a generator
-to one of the combining forms (all forms that end in a `!`), or if you
-pass the same generator to such a form twice, then an error will be
-raised and new the generator will not be built.
+behavior is not allowed. Generally speaking, if you pass a generator
+to more than one combining form (all forms that end in a `!`), or if
+you pass the same generator to such a form twice, then an error will
+be raised and new the generator will not be built.
 
 An ongoing goal is to make those errors nicer to look at so that you
 can more easily pin-point where you goofed.
