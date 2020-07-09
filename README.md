@@ -494,12 +494,12 @@ generator constructor called `thread-through`.
 (defun thread-through (elem vec)
   "Creates a generator that produces a series of N vectors of length
    N, where N is one greater than the length of VEC.  The vectors
-   produced by this generator have the same elements of VEC but have ELEM
+   produced by this generator have the same contents as VEC but have ELEM
    inserted at each possible spot, N spots in all. 
 
    Note: The generator reuses the memory that it returns on each step. If
-   you intend to collect to products of the generator, you should copy
-   them to somehow first."
+   you intend to collect the values of the generator, you should copy
+   them on each iteration."
    
   (let ((buffer (concatenate 'vector vec (list elem)))) ;; reusable buffer
     (map! (lambda (idx)
