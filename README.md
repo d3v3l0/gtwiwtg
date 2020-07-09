@@ -69,7 +69,8 @@ apears at the end of the document, following the tutorial.
 
 GTWIWTG is a tiny library for creating and using generators. 
 
-If you have never heard of generators before, let offer a definition.
+If you have never heard of generators before, let me offer a
+definition.
 
 A generator is an object that can produce a series of values, one
 value at a time.  Generators sometimes convenient when you want to
