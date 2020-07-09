@@ -293,6 +293,24 @@ distinction.
 
 ;;; Some utilities
 
+(defun make-queue ()
+  (cons nil nil))
+
+(defun enqueue (x q) 
+  (push x (car q)))
+
+(defun dequeue (q)
+  (when (and (car q) (null (cdr q)))
+    (setf (cdr q) (reverse (car q))
+          (car q) nil))
+  (when (cdr q) (pop (cdr q))))
+             
+(defun queue-empty-p (q)
+  (and (null (car q))
+       (null (cdr q))))
+
+;;; Some assertion tests
+
 (defun all-different (things)
   (= (length things) (length (remove-duplicates things))))
 
@@ -544,6 +562,33 @@ returns NIL."
   (setf (slot-value gen 'dirty-p) nil)
   gen)
 
+
+(defun nfurcate! (count gen)
+  (make-dirty gen)
+  (let ((qs (loop :for _ :below count-if :collect (make-queue))))
+    (loop :for build-q :in qs
+       :collect
+         (let ((local-q build-q))
+           (from-thunk-until
+            (lambda ()
+              (cond ((not (queue-empty-p local-q))
+                     (dequeue local-q))
+
+                    ((has-next-p gen)
+                     (let ((next-v (next gen)))
+                       (loop :for q :in qs :do (enqueue next-v q))
+                       (dequeue local-q)))
+
+                    (t (error "Attempted to get next from a spent generator."))))
+
+            (lambda ()
+              (and (not (has-next-p gen))
+                   (queue-empty-p local-q))))))))
+
+(defun partition! (pred gen)
+  (destructuring-bind (gen1 gen2) (nfurcate! 2 gen)
+    (list (filter! pred gen1)
+          (filter! (complement pred) gen2))))
 
 ;;; CONSUMERS
 

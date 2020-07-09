@@ -24,6 +24,8 @@
            #:merge!
            #:skip!
            #:skip-while!
+           #:nfurcate!
+           #:partition!
            #:for
            #:fold
            #:collect
