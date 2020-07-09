@@ -3,7 +3,8 @@
   (:export
    #:perms
    #:all-primes
-   #:fibs))
+   #:fibs
+   #:a-kind-of-grep))
 
 (in-package :gtwiwtg.examples)
 
@@ -109,3 +110,13 @@ vector VEC, one at a time."
 ;;                   subperms))))
 ;;
 ;; which looks a little nicer but is less kind to the heap and to GC.
+
+;;; A kind of Grep ;;;
+
+(defmacro a-kind-of-grep (match-var key file &rest body)
+  `(for ,match-var (filter! (lambda (line) (search ,key line))
+                            (file-lines ,file))
+     ,@body))
+
+
+;; find all export expressions in my bashrc file

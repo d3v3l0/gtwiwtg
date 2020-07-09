@@ -64,7 +64,30 @@ apears at the end of the document, following the tutorial.
 > (car (pick-out '(40) (fibs))) ;; 267914296
 
 ```
-    
+
+### A Kind Of Grep
+
+``` lisp
+
+
+> (defmacro a-kind-of-grep (match-var key file &rest body)
+   `(for ,match-var (filter! (lambda (line) (search ,key line))
+                             (file-lines ,file))
+      ,@body))
+
+;; look for export lines in my .bashrc
+
+> (let ((count 0))
+    (a-kind-of-grep line "export" "~/.bashrc" 
+        (incf count)
+        (print line)))
+      
+"export PATH=$HOME/.roswell/bin:$PATH" 
+"export PATH=$HOME/.local/bin:$PATH" 
+2
+
+```
+
 ## Tutorial
 
 GTWIWTG is a tiny library for creating and using generators. 
