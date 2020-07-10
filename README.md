@@ -2,12 +2,10 @@
 
 *Generators The Way I Want Them Generated*
 
-A naive generator library that doesn't use fancy pants concepts like
-first class continuations.
+An extensible library for generators. 
 
 The GTWIWTG library is meant to be small, explorable, and understandable.
-The source code is meant to be readible and easy to
-follow.
+The source code is meant to be legible and straightforward.
 
 Every symbol exported from the `GTWIWTG` package has a useful
 docstring. Many docstrings include examples of use.
