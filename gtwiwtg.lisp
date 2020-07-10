@@ -569,7 +569,7 @@ Caveat:
    stream, that stream will not be closed.
 
 "
-  (make-dirty source-generator)
+  (sully-when-clean (list source-generator))
   (let ((qs (loop :for _ :below count :collect (make-queue)))
         (stop-cells (loop :for _ :below count :collect (list nil))))
     (loop
