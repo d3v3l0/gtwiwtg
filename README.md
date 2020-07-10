@@ -74,7 +74,7 @@ apears at the end of the document, following the tutorial.
             (zip! (range) (file-lines file))))
 
 
-> (for (idx line) (grepper "defun" "/home/colony/projects/gtwiwtg/examples.lisp")
+> (for (idx line) (grepper "defun" "examples.lisp")
      (format t "~4a: ~a~%" idx line))
 
 
