@@ -274,7 +274,7 @@ Finally! Once you have built up your generators using *constructors*
 and *combinations*, you want to actually use them for something. This
 is where *consumers* come in.
 
-There is one fundamental consumer form, a macro, called `for`. (*Tense Violins*)
+There is one fundamental consumer, a macro, called `for`.  (*Triumphant Horns Play*)
 
 Here is how it looks when you use it:
 
