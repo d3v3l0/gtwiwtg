@@ -45,20 +45,20 @@ example apears at the end of the document, following the tutorial.
 
 ```
 
-### Fun With Fibbonacci
+### Fun With Fibonacci
 
 ``` lisp 
 
 > (defun fibs ()
-    "Creates an infinite series of Fibbonacci numbers."
+    "Creates an infinite series of Fibonacci numbers."
     (from-recurrence
      (lambda (n-1 n-2) (+ n-1 n-2))
      1 0))
 
-;; First ten Fibbonacci numbers
+;; First ten Fibonacci numbers
 > (take 10 (fibs)) ;; (1 2 3 5 8 13 21 34 55 89) 
 
-;; Just the 40th Fibbonacci number, indexed from 0
+;; Just the 40th Fibonacci number, indexed from 0
 > (car (pick-out '(40) (fibs))) ;; 267914296
 
 ```
