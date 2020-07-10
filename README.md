@@ -201,7 +201,7 @@ incrementally "build up" a desired computation before it is run.
 The three core transformation functions are:
 
 - `(map! fn gen &rest gens)` makes a new generator by mapping `fn` over other generators
-- `(filter! pred gen)` makes a new generator by discarding some elements that
+- `(filter! pred gen)` makes a new generator by discarding values that dont satisfy `pred`
 - `(inflate! fn gen)` The function `fn` should make  new generators using the values produced by the generator `gen`. The `inflate!` function combines all those "intermediate" generators into a single generator.
 
 Admittedly, the behavior of `inflate!` is difficult to grok by reading a description. 
@@ -268,6 +268,51 @@ produce constant-memory operations. However, when you consume the
 generators that the above forms produce, then new memory will be
 consed during consumption. See the docstrings for both forms for more details.
 
+### A Word Of Warning!
+
+(Or, there's a reason those forms all end in `!`.)
+
+You must be cautious when incrementally building up generators. The
+reason for caution is that generators cannot be "combined twice", but
+you may be tempted to try doing just that. 
+
+I.e.These generators are not functional objects. Combining them with
+one other effectively "destroys" them as independent objects, by
+marking them as unfit for use in other combining forms.
+
+[Aside: This was done for efficiency reasons, and I might make a
+"purely functional" parallel universe for these generators in the
+future.]
+
+The library tries to help you out by signalling an error whenever you
+try to do something that would lead to _mangled memory_.  Each
+docstring provides details about when error conditions are signalled
+for each combining form. Don't quote me on it, but I *think* that the
+library will prevent you from making generators with surprising
+(i.e. erroneous) behavior.
+
+Here is an example to show you the illegal behavior:
+
+``` lisp
+
+> (let ((ten-times (times 10)))
+    (zip! ten-times ten-times))
+
+; Evaluation aborted on #<SIMPLE-ERROR "~@<The assertion ~S failed~:[.~:; ~
+                                           with ~:*~{~S = ~S~^, ~}.~]~:@>" {10046A61D3}>.
+
+```
+
+The gist is that we tried to zip a generator with itself. Such
+behavior is not allowed. Generally speaking, if you pass a generator
+to more than one combining form (all forms that end in a `!`), or if
+you pass the same generator to such a form twice, then an error will
+be raised and new the generator will not be built.
+
+An ongoing goal is to make those errors nicer to look at so that you
+can more easily pin-point where you goofed.
+
+
 ### The Fundamental Consumer
 
 Finally! Once you have built up your generators using *constructors*
@@ -276,7 +321,7 @@ is where *consumers* come in.
 
 There is one fundamental consumer, a macro, called `for`.  (*Triumphant Horns Play*)
 
-Every other consumer in `GTWIWTG` uses `for` under the good.  
+Every other consumer in `GTWIWTG` uses `for` under the hood.  
 
 Here is how it looks when you use it:
 
@@ -372,49 +417,6 @@ letting you not have to think about how generators work.
 You need only remember the rule: Generators Are Consumed At Most Once.
 
 
-### A Word Of Warning!
-
-(Or, there's a reason those forms all end in `!`.)
-
-You must be cautious when incrementally building up generators. The
-reason for caution is that generators cannot be "combined twice", but
-you may be tempted to try doing just that. 
-
-I.e.These generators are not functional objects. Combining them with
-one other effectively "destroys" them as independent objects, by
-marking them as unfit for use in other combining forms.
-
-[Aside: This was done for efficiency reasons, and I might make a
-"purely functional" parallel universe for these generators in the
-future.]
-
-The library tries to help you out by signalling an error whenever you
-try to do something that would lead to _mangled memory_.  Each
-docstring provides details about when error conditions are signalled
-for each combining form. Don't quote me on it, but I *think* that the
-library will prevent you from making generators with surprising
-(i.e. erroneous) behavior.
-
-Here is an example to show you the illegal behavior:
-
-``` lisp
-
-> (let ((ten-times (times 10)))
-    (zip! ten-times ten-times))
-
-; Evaluation aborted on #<SIMPLE-ERROR "~@<The assertion ~S failed~:[.~:; ~
-                                           with ~:*~{~S = ~S~^, ~}.~]~:@>" {10046A61D3}>.
-
-```
-
-The gist is that we tried to zip a generator with itself. Such
-behavior is not allowed. Generally speaking, if you pass a generator
-to more than one combining form (all forms that end in a `!`), or if
-you pass the same generator to such a form twice, then an error will
-be raised and new the generator will not be built.
-
-An ongoing goal is to make those errors nicer to look at so that you
-can more easily pin-point where you goofed.
 
 ### The Accumulating Consumer
 
