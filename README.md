@@ -262,9 +262,11 @@ And some experimental tools:
   first generating the memebers of `gen` that pass the predicate
   `pred`, and the second generating those that don't.
   
-Both of the above are marked as EXPERIMENTAL because by consuming the
-generators that the above form produces new memory might be
-consed. See the docstrings.
+Both of the above are marked as EXPERIMENTAL because they may not be
+in line with the the spirit of this library. I wanted the library to
+produce constant-memory operations. However, when you consume the
+generators that the above forms produce, then new memory will be
+consed during consumption. See the docstrings for both forms for more details.
 
 ### The Fundamental Consumer
 
