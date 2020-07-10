@@ -333,6 +333,10 @@ Returns NIL on the last iteration.
 (defun all-good (gens)
   (and (all-clean gens) (all-different gens)))
 
+(defun sully-when-clean (gens)
+  (assert (all-good gens))
+  (dolist (g gens) (make-dirty g)))
+
 ;;; MODIFIERS and COMBINATORS
 
 (defun map! (map-fn gen &rest gens)
@@ -350,13 +354,12 @@ Error Conditions:
  - If any of the generators have been used elsewhere, an error will be signalled.
 "
   (let ((all-gens (list* gen gens)))
-    (assert (all-good all-gens))
-    (dolist (g all-gens) (make-dirty g))
+    (sully-when-clean all-gens)
     (from-thunk-until
      (lambda ()
        (apply map-fn (mapcar #'next all-gens)))
      (lambda ()
-       (some (complement #'has-next-p) all-gens))
+       (some (complement #'has-next-p) all-gens)) ; when at least one has no next value
      (lambda ()
        (dolist (g all-gens) (stop g))))))
 
@@ -367,11 +370,10 @@ when applied to PRED.
 Error Condition:
  - If GEN has been used elsewhere, an error will be signalled.
 "
-  (assert (not (dirty-p gen)))
-  (make-dirty gen)
+  (sully-when-clean (list gen))
   (let (on-deck)
     (from-thunk-until
-     (lambda () on-deck)
+     (lambda () on-deck) ; consumers always call has-next-p before next
      (lambda ()
        (loop
           :while (has-next-p gen)
@@ -379,8 +381,8 @@ Error Condition:
           :when (funcall pred candidate)
           :do (progn
                 (setf on-deck candidate)
-                (return nil))
-          :finally (return t)))
+                (return nil))   ; Don't stop generating, we found one
+          :finally (return t))) ; Stop generating, we can't find one.
      (lambda ()
        (stop gen)))))
 
@@ -406,10 +408,9 @@ Here is an example:
 
 Error Conditions:
  - If GEN has been used elsewhere, an error will be signalled.
+ - If GEN is an empty generator, an error will be signalled.
 "
-  (assert (not (dirty-p gen)))
-  (make-dirty gen)
-
+  (sully-when-clean (list gen))
   (let ((sub-gen (funcall fn (next gen))))
     (from-thunk-until
      (lambda () (next sub-gen))
@@ -426,6 +427,7 @@ Error Conditions:
        ;; hence:
        (not (or (has-next-p sub-gen)
                 (has-next-p gen))))
+
      (lambda ()
        (stop gen)
        (when sub-gen (stop sub-gen))))))
@@ -435,18 +437,11 @@ Error Conditions:
   "Returns a generator that is the concatenation of the generators
 passed as arguments.
 
-Each of the arguments to CONCAT! must be different. If any compare
-EQL, an error will be signalled.
-
 Error Conditions:
  - If any of the generators compare EQL, an error will be signalled.
  - If any of the generators has been used elsewhere, an error will be sigalled.
-
-Caveat: 
- - CONCAT! Modifies and returns its first argument.
 "
-  (assert (all-good (list* gen gens)))
-  (dolist (g (list* gen gens)) (make-dirty g)) 
+  (sully-when-clean (list* gen gens))
   (inflate! #'identity (seq (list* gen gens))))
 
 (defun zip! (gen &rest gens)
@@ -476,13 +471,10 @@ An example:
 
 Error Conditions:
  - If any of the generators compare EQL, an error will be signalled.
- - If any of the generators have been used elsewhere, an errror will be signalled.
+ - If any of the generators have been used elsewhere, an error will be signalled.
 "
   (let ((all-gens (list* gen1 gen2 gens)))
-
-    (assert (all-good all-gens))
-    (dolist (g all-gens) (make-dirty g))
-
+    (sully-when-clean all-gens)
     (from-thunk-until
      (lambda ()
        (let ((vals (mapcar #'next all-gens)))
