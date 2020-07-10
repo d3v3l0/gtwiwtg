@@ -580,9 +580,9 @@ time. It is a good example of the usefulness of `inflate!`.
 The basic flow is:
 
 1. single out the first element of the vector
-2. generate permutations for the remainder of the vector
-3. return a generator that "adds back" the singled out element for
-   each possible spot.
+2. make a generator for permutations of the remainder of the vector
+3. return a generator that "adds back" the singled out element at
+   each possible spot in each permutation.
 
 The interesting bit about this is that we recursively compute
 permutation generators for the subvectors of `vec` in a classic
