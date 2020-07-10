@@ -525,17 +525,29 @@ A silly example:
 
 ``` lisp
 
-(defclass countdown (gtwiwtg::generator!)
-  ((value :reader countdown-value 
-          :initarg :value 
-          :initform 0)))
+> (defclass countdown (gtwiwtg::generator!)
+    ((value :accessor countdown-value 
+            :initarg :value 
+            :initform 0)))
 
-(defmethod gtwiwtg::next ((g cowntdown))
-  (decf (countdown-value g)))
+> (defmethod gtwiwtg::next ((g countdown))
+    (decf (countdown-value g)))
   
-(defmethod gtwiwtg::has-next-p ((g countdown))
-  (plusp (countdown-value g)))
+> (defmethod gtwiwtg::has-next-p ((g countdown))
+    (plusp (countdown-value g)))
   
+;; you might also want a constructor 
+
+> (defun countdown (n) (make-instance 'countdown :value n))
+
+;; now you can use it:
+
+> (for x (countdown 4) (print x))
+  
+3 
+2 
+1 
+0 
 ```
 
 You can see that `next` ASSUMES that there is a next value. This is
