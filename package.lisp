@@ -20,6 +20,7 @@
            #:inflate!
            #:concat!
            #:zip!
+           #:indexed!
            #:merge!
            #:skip!
            #:skip-while!
