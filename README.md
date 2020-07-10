@@ -101,9 +101,11 @@ when you want to generate sequential data using functions.
 
 ### Three Kinds Of Function 
 
-In GTWIWTG, there are functions that *construct* generators, functions
-that *combine* generators, and functions and macros that *consume*
-generators. 
+In GTWIWTG, there are three kinds of functions.
+
+1. functions that *construct* generators
+2. functions that *combine* generators
+3. functions and macros that *consume* generators. 
 
 ### The Breadwinning Constructors 
 
