@@ -508,7 +508,7 @@ The `pick-out` consumer is interesting enough to see a quick example of:
 Generators are subclasses of `gtwiwtg::generator!` that have at least
 two methods specialized on them:
 
-- `(gtwiwtg::next gen)` : advances the generator and its next value
+- `(gtwiwtg::next gen)` : advances the generator and gets its next value
 - `(gtwiwtg::nas-next-p gen)` : checks whether or not the generator has a next value 
 
 Additionally, if your generator needs to perform cleanup after it is
