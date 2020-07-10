@@ -3,14 +3,18 @@
 
 ;;; Generator Protocol ;;;
 
+;; None of the following are meant to be called directly by users of the library.
+
 (defgeneric next (gen)
-  (:documentation "gets next if available. Throws an error otherwise."))
+  (:documentation "Returns the next value of this generator, if
+  available. Unspecified behavior if the generator has been exausted."))
 
 (defgeneric has-next-p (gen)
-  (:documentation "returns true if next can be called on this generator!"))
+  (:documentation "Returns true if next can be called on the generator"))
 
 (defgeneric stop (gen)
-  (:documentation "stops the generator"))
+  (:documentation "Explicitly stops the generator. Specialize :after
+  methods with any generator clean-up that needs to be done."))
 
 ;;; Base Generator Class ;;; 
 
@@ -18,8 +22,8 @@
   ((dirty-p
     :accessor dirty-p
     :initform nil
-    :documentation "Indicates whether or not this any of this
-    generator has been consumed, or should behave as if it has been.")
+    :documentation "Indicates whether or not any this generator has
+    generated any values yet, or if it should behave as if it has.")
    (stopped-p
     :accessor stopped-p
     :initform nil
@@ -37,8 +41,8 @@
   (defun make-keyword (symb)
     (read-from-string (format nil ":~a" symb))))
 
-(defmacro a-class (name supers &rest slots)
-  `(defclass ,name ,supers
+(defmacro a-generator-class (name supers &rest slots)
+  `(defclass ,name ,(cons 'generator! supers)
      ,(mapcar (lambda (def)
                  (if (consp def)
                      `(,(car def)
@@ -50,7 +54,7 @@
 
 ;;; Generator Classes ;;; 
 
-(a-class range-backed-generator! (generator!)
+(a-generator-class range-backed-generator! ()
          (at 0) to (by 1) inclusive (comparator #'<))
 
 (defmethod has-next-p ((g range-backed-generator!))
@@ -66,7 +70,7 @@
     (incf at by)
     at))
 
-(a-class sequence-backed-generator! (generator!)
+(a-generator-class sequence-backed-generator! ()
          sequence index)
 
 (defmethod has-next-p ((g sequence-backed-generator!))
@@ -79,7 +83,7 @@
     (incf index)
     (elt sequence index)))
 
-(a-class list-backed-generator! (generator!)
+(a-generator-class list-backed-generator! ()
          list)
 
 (defmethod has-next-p ((g list-backed-generator!))
@@ -89,7 +93,7 @@
 (defmethod next ((g list-backed-generator!))
   (pop (slot-value g 'list)))
 
-(a-class thunk-backed-generator! (generator!)
+(a-generator-class thunk-backed-generator! ()
          next-p-fn
          next-fn
          stop-fn)
@@ -106,7 +110,7 @@
     (when stop-fn
       (funcall stop-fn))))
 
-(a-class stream-backed-generator! (generator!)
+(a-generator-class stream-backed-generator! ()
          stream reader)
 
 (defmethod has-next-p ((g stream-backed-generator!))
