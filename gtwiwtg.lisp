@@ -548,7 +548,14 @@ Caveat:
  - The generators produced by NFURCATE! allocate new memory as they
    are consumed. This allocation can be O(COUNT * SIZE) in space
    complexity, where SIZE is the size of GEN. Hence, use with caution
-   on infinite generators.
+   on infinite generators.  
+
+ - The SOURCE-GENERATOR will be cleaned up only after all of the
+   returned generators have been consumed. That is if you make some
+   generators using NFURCATE! but do use them, then the
+   SOURCE-GENERATOR may never be cleaned up. I.e. if it is backed by a
+   stream, that stream will not be closed.
+
 "
   (make-dirty source-generator)
   (let ((qs (loop :for _ :below count :collect (make-queue)))
@@ -598,6 +605,13 @@ Caveat:
    consume them. This allocation may be O(2 * SIZE) in space
    complexity, where SIZE is the size of GEN. Hence, use with caution
    on infinite generators.
+
+- The generator GEN will be cleaned up only after both returned
+  generators have been. Hence, you must consume both or you risk
+  leaving some clean up undone. E.g. If GEN is a stream backed
+  generator, the stream will not be closed until both PASSING and
+  FAILING have been consumed.
+
 "
   (destructuring-bind (gen1 gen2) (nfurcate! 2 gen)
     (list (filter! pred gen1)
