@@ -189,7 +189,7 @@ You can see some of these in action in the examples section at the top of this d
 ### The Combination and Transformation Functions
 
 You can create more intersting and more specific generators by using a
-few higher-order functions to transform combine and transform simple generators.
+few higher-order functions to combine and transform simple generators.
 
 These transformations are desirable because they can be performed
 before any elements are produced.
@@ -248,6 +248,7 @@ Here are some simple examples of their use:
 ### The Other Combinations and Transformations 
 
 - `(zip! gen1 &rest gens)` is shorthand for `(map! #'list gen1 gen2 ...)`
+- `(indexed! gen)` is shorthand for `(zip! (range) gen)`
 - `(concat! gen &rest gens)` is shorthand for `(inflate! #'identity (seq (list* gen1 gen2 ...)))`
 - `(skip! n gen)` produces a generator by skipping the first `n` values in `gen`
 - `(skip-while! pred gen)` produces a generator by skippng elements of `gen` while `pred` is `t`

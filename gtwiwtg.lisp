@@ -462,6 +462,10 @@ Error Conditions:
   "Is a shortcut for (MAP! #'LIST GEN1 GEN2 ...)"
   (apply #'map! #'list gen gens))
 
+(defun indexed! (gen)
+  "Is shorthand for (ZIP! (RANGE) GEN)"
+  (zip! (range) gen))
+
 
 (defun merge! (comparator gen1 gen2 &rest gens)
   "Emulates the behavior of MERGE (in the ANSI standard), but for generators.
