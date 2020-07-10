@@ -505,6 +505,46 @@ The `pick-out` consumer is interesting enough to see a quick example of:
 (#\r #\e #\e #\r #\n)
 ```
 
+### Making New Generators 
+
+Generators are subclasses of `gtwiwtg::generator!` that have at least
+two methods specialized on them:
+
+- `(gtwiwtg::next gen)` : advances the generator and its next value
+- `(gtwiwtg::nas-next-p gen)` : checks whether or not the generator has a next value 
+
+Additionally, if your generator needs to perform cleanup after it is
+consumed, you can implement the `:after` method combination for the method 
+
+- `(gtwiwtg::stop gen)` : is called by consumers to mark the generator
+  as stopped.
+  
+None of the above are meant to be called by users of the library,
+which is why they are not exported symbols. But if you want to make
+your own generators you can.
+
+A silly example:
+
+``` lisp
+
+(defclass countdown (gtwiwtg::generator!)
+  ((value :reader countdown-value 
+          :initarg :value 
+          :initform 0)))
+
+(defmethod gtwiwtg::next ((g cowntdown))
+  (decf (countdown-value g)))
+  
+(defmethod gtwiwtg::has-next-p ((g countdown))
+  (plusp (countdown-value g)))
+  
+```
+
+You can see that `next` ASSUMES that there is a next value. This is
+one of the reasons you are not ment to call `next` manually.  The
+`for` consumer automatcially checks that there is a next value before
+trying to get it.
+
 ## The Permutations Example
 
 One final example to show you what you can do. Here is a function that
