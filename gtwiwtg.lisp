@@ -233,7 +233,7 @@ the values passed as ARGS looped forever."
   (let ((state (copy-list args)))
     (from-thunk
      (lambda ()
-       (unless (car state)
+       (unless state
          (setf state (copy-list args)))
        (pop state)))))
 
