@@ -668,6 +668,7 @@ A -- 4
                        `(destructuring-bind ,var-exp (next ,gen-var) ,@body)
                        `(let ((,var-exp (next ,gen-var))) ,@body))))
     `(let ((,gen-var ,gen))
+       (assert (typep ,gen-var 'gtwiwtg::generator!))
        (loop
           :while (has-next-p ,gen-var)
           :do
