@@ -426,8 +426,11 @@ Here is an example:
 Error Conditions:
  - If GEN has been used elsewhere, an error will be signalled.
 "
-  (sully-when-clean (list gen))
-  (if (not (has-next-p gen)) gen 
+  (sully-when-clean (list gen))  
+  (if (not (has-next-p gen))
+      (progn
+        (setf (dirty-p gen) nil)
+        gen) 
       (let ((sub-gen (funcall fn (next gen))))
         (from-thunk-until
          (lambda () (next sub-gen))
@@ -524,8 +527,9 @@ Caveats:
  - It is possible that SKIP! will skip the whole source generator,
    returning an empty gernator.
 "
+  (sully-when-clean (list gen))
   (dotimes (x n) (when (has-next-p gen) (next gen)))
-  (setf (slot-value gen 'dirty-p) nil)
+  (setf (dirty-p gen ) nil)
   gen)
 
 (defun skip-while! (pred gen)
@@ -539,9 +543,10 @@ Caveat:
    the whole generated sequence. 
  - If the generator is infinite, then skip-while! MIGHT never return.
 "
+  (sully-when-clean (list gen))
   (loop :while (and (has-next-p gen)
                     (funcall pred (next gen))))
-  (setf (slot-value gen 'dirty-p) nil)
+  (setf (dirty-p gen) nil)
   gen)
 
 
