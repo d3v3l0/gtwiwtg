@@ -23,10 +23,10 @@ docstring. Many docstrings include examples of use.
 
 ```
 
-## Motivating Examples
+## First, Here's the Action
 
-Here's some code to show you what you can do.  A more involved example
-apears at the end of the document, following the tutorial.
+Here are a few examples to show you what you can do.  A more involved
+example apears at the end of the document, following the tutorial.
 
 ### All The Primes
 
