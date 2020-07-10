@@ -276,6 +276,8 @@ is where *consumers* come in.
 
 There is one fundamental consumer, a macro, called `for`.  (*Triumphant Horns Play*)
 
+Every other consumer in `GTWIWTG` uses `for` under the good.  
+
 Here is how it looks when you use it:
 
 ``` lisp
@@ -340,16 +342,47 @@ Finally, the body is evaluated for each iteration.
 [Aside: `for` used to be called `iter`, but I didn't want to step on
 the toes of `series` and `iterate` users :P].
 
+### Generators are Consumed at Most Once
+
+Even if you don't think you're "using up" the whole generator, a
+generator can only be passed to a single consumer. Once that consumer
+finishes, the generator is consumed.  Here is an example:
+
+``` lisp
+
+>(let ((foo (seq "foobar")))
+   (print (take 2 foo))
+   (print (collect foo)))
+
+(#\f #\o) 
+NIL 
+
+```
+
+Even though you only *seemed* to use the first two members of the
+generator `foo`, the `take` form will mark the generator as having
+been consumed in its entirety. 
+
+That is, even when the whole sequence was not actually generated, a
+consuming form leaves its generator in an unusable state.  This
+approach has been taken in order to automatically close streams for
+stream-backed generators - i.e. it has been done in the spirit of
+letting you not have to think about how generators work.
+
+You need only remember the rule: Generators Are Consumed At Most Once.
+
 
 ### A Word Of Warning!
 
 (Or, there's a reason those forms all end in `!`.)
 
-You must be cautious with that third approach in the example above,
-i.e. incrementally building up generators. The reason for caution is
-that generators cannot be "combined twice". I.e. they are not
-functional objects and combining them with one other effectively
-"destroys" them as independent objects.
+You must be cautious when incrementally building up generators. The
+reason for caution is that generators cannot be "combined twice", but
+you may be tempted to try doing just that. 
+
+I.e.These generators are not functional objects. Combining them with
+one other effectively "destroys" them as independent objects, by
+marking them as unfit for use in other combining forms.
 
 [Aside: This was done for efficiency reasons, and I might make a
 "purely functional" parallel universe for these generators in the
