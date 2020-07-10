@@ -519,20 +519,30 @@ time. It is a good example of the usefulness of `inflate!`.
   (if (= 1 (length vec)) (seq (list vec))
       (let ((elem (elt vec 0))
             (subperms (perms (make-array (1- (length vec))
-                                         :displaced-to vec
+                                         :displaced-to vec         ; share vec's memory
                                          :displaced-index-offset 1
                                          :element-type (array-element-type vec)))))
         (inflate! (lambda (subperm) (thread-through elem subperm)) 
                   subperms))))
 ```
+The basic flow is:
+
+1. single out the first element of the vector
+2. generate permutations for the remainder of the vector
+3. return a generator that "adds back" the singled out element for
+   each possible spot.
 
 The interesting bit about this is that we recursively compute
-generators on the sub-arrays in a classic divide-and-conquer way.  The
-code is made signifiantly noisier by the use of displaced arrays, but
-is made signifiantly more memory efficient as well.
+permutation generators for the subvectors of `vec` in a classic
+divide-and-conquer way, and then use `inflate!` to combine those
+"generated sub-generators" into a single generator, which we return.
+
+The above code is made signifiantly noisier by the use of displaced
+arrays. Displaced arrays let us share memory with the original vector.
 
 For each "sub permutation", we create a new generator using a
-generator constructor called `thread-through`.
+generator constructor called `thread-through`. This is the part where
+we "add back" the singled out element.
 
 ``` lisp
 (defun thread-through (elem vec)
@@ -554,7 +564,8 @@ generator constructor called `thread-through`.
 ```
 
 And this function uses a utility function called `fill-and-insert`
-that just fills a buffer:
+that just fills a buffer, which I pulled out into its own function for
+clarity:
 
 ``` lisp
 
@@ -617,8 +628,8 @@ And here's a quick demo of its use:
 
 We could have generated all 121645100408832000 permutations of
 "generators are cool", and, though it would have taken us an eternity
-(approximately 1000 years on a single core of my machine), the memory
-consumption would stay at an even keel.
+(a little more than 1000 years on a single core of my machine), the
+memory consumption would stay at an even keel.
 
 
 
