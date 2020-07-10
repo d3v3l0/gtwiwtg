@@ -34,6 +34,9 @@
 (defmethod stop ((g generator!))
   (setf (stopped-p g) t))
 
+(defmethod has-next-p :around ((g generator!))
+  (unless (stopped-p g) (call-next-method)))
+
 (defun make-dirty (g) (setf (dirty-p g) t))
 
 ;;; Utility Class Builder ;;; 
@@ -59,12 +62,11 @@
          (at 0) to (by 1) inclusive (comparator #'<))
 
 (defmethod has-next-p ((g range-backed-generator!))
-  (with-slots (to current comparator by at stopped-p) g
-    (unless stopped-p
-      (or (not to)
+  (with-slots (to current comparator by at) g
+    (or (not to)
           (funcall comparator
                    (+ by at)
-                   to)))))
+                   to))))
 
 (defmethod next ((g range-backed-generator!))
   (with-slots (at by) g
@@ -75,9 +77,8 @@
          sequence index)
 
 (defmethod has-next-p ((g sequence-backed-generator!))
-  (with-slots (stopped-p index sequence) g
-    (unless stopped-p
-      (< index (1- (length sequence))))))
+  (with-slots (index sequence) g
+    (< index (1- (length sequence)))))
 
 (defmethod next ((g sequence-backed-generator!))
   (with-slots (index sequence) g
@@ -88,8 +89,7 @@
          list)
 
 (defmethod has-next-p ((g list-backed-generator!))
-  (with-slots (stopped-p list) g
-    (unless stopped-p (consp list))))
+  (consp (slot-value g 'list)))
 
 (defmethod next ((g list-backed-generator!))
   (pop (slot-value g 'list)))
@@ -100,8 +100,7 @@
          stop-fn)
 
 (defmethod has-next-p ((g thunk-backed-generator!))
-  (with-slots (stopped-p next-p-fn) g
-    (unless stopped-p (funcall next-p-fn))))
+  (funcall (slot-value g 'next-p-fn) ))
 
 (defmethod next ((g thunk-backed-generator!))
   (funcall (slot-value g 'next-fn)))
@@ -115,9 +114,7 @@
          stream reader)
 
 (defmethod has-next-p ((g stream-backed-generator!))
-  (with-slots (stopped-p stream) g
-    (unless stopped-p
-      (open-stream-p stream))))
+  (open-stream-p (slot-value g 'stream)))
 
 (defmethod next ((g stream-backed-generator!))
   (with-slots (reader stream) g
