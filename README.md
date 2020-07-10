@@ -176,7 +176,7 @@ Here is a brief listing of the other generator constructors in GTWIWTG:
 - `(repeater &rest args)` repeats its arguments in order, looping forever.
 - `(noise &optional (arg 1.0))` an infinite sequence of random numbers
 - `(from-thunk thunk)` an infinite sequence of calls to `(funcall thunk)`
-- `(from-thunk-until thunk until)` like `from-thunk`, but stops when `(funcall until)` is non nil
+- `(from-thunk-until thunk &optional until clean-up)` like `from-thunk`, but stops when `(funcall until)` is non nil. Runs the thunk `clean-up` when done.
 - `(from-thunk-times thunk n)` like `from-thunk` but stops after `n` times.
 - `(from-recurrence fn n-1 &rest n-m)` generate using a recurrence relation 
 - `(from-input-stream stream reader)` turn a stream into a generator
@@ -253,6 +253,17 @@ Here are some simple examples of their use:
 - `(skip-while! pred gen)` produces a generator by skippng elements of `gen` while `pred` is `t`
 - `(merge! comp gen1 gen2 &rest gens)` emulates the behavior of `merge` but for generators
 
+And some experimental tools:
+
+- `(nfurcate! n gen)` returns a list of `n` new generators, each
+  producing the same elements as of `gen`.
+- `(partition! pred gen)` returns a list of two new generators, the
+  first generating the memebers of `gen` that pass the predicate
+  `pred`, and the second generating those that don't.
+  
+Both of the above are marked as EXPERIMENTAL because by consuming the
+generators that the above form produces new memory might be
+consed. See the docstrings.
 
 ### The Fundamental Consumer
 
