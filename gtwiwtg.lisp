@@ -12,23 +12,6 @@
 (defgeneric stop (gen)
   (:documentation "stops the generator"))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun make-keyword (symb)
-    (read-from-string (format nil ":~a" symb))))
-
-;;; Utility Class Builder ;;; 
-
-(defmacro a-class (name supers &rest slots)
-  `(defclass ,name ,supers
-     ,(mapcar (lambda (def)
-                 (if (consp def)
-                     `(,(car def)
-                        :initarg ,(make-keyword (car def))
-                        :initform ,(second def))
-                     `(,def :initarg ,(make-keyword def)
-                            :initform nil)))
-               slots)))
-
 ;;; Base Generator Class ;;; 
 
 (defclass generator! ()
@@ -47,6 +30,23 @@
   (setf (stopped-p g) t))
 
 (defun make-dirty (g) (setf (dirty-p g) t))
+
+;;; Utility Class Builder ;;; 
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-keyword (symb)
+    (read-from-string (format nil ":~a" symb))))
+
+(defmacro a-class (name supers &rest slots)
+  `(defclass ,name ,supers
+     ,(mapcar (lambda (def)
+                 (if (consp def)
+                     `(,(car def)
+                        :initarg ,(make-keyword (car def))
+                        :initform ,(second def))
+                     `(,def :initarg ,(make-keyword def)
+                            :initform nil)))
+               slots)))
 
 ;;; Generator Classes ;;; 
 
@@ -158,15 +158,14 @@ If TO is NIL, then the generator produces an infinite sequence.
   "Shorthand for (RANGE :TO N)"
   (range :to n))
 
-
 (defun seq (sequence &key (start 0))
   "Turns a sequecne (a list, vector, string, etc) into a
 generator. The resulting generator will generate exactly the memebers
 of the sequence."
+  (assert (typep sequence 'sequence))
   (make-instance 'sequence-backed-generator!
                  :sequence sequence
                  :index (1- start)))
-
 
 (defun from-thunk-until (thunk &optional (until (constantly nil)) clean-up)
   "Creates a generator that produces a series of value by successively
@@ -179,6 +178,8 @@ consumer such as FOR, FOLD, COLLECT, etc.
 
 By default, UNTIL is the function (CONSTANTLY NIL). I.e. it will
 generate forever."
+  (assert (and (every #'functionp (list thunk until))
+               (or (null clean-up) (functionp clean-up))))
   (make-instance 'thunk-backed-generator! 
                  :stop-fn clean-up
                  :next-p-fn (complement until)
