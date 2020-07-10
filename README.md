@@ -69,22 +69,23 @@ apears at the end of the document, following the tutorial.
 
 ``` lisp
 
+> (defun grepper (pattern file)
+   (filter! (lambda (idx-line) (search pattern (second idx-line)))
+            (zip! (range) (file-lines file))))
 
-> (defmacro a-kind-of-grep (match-var key file &rest body)
-   `(for ,match-var (filter! (lambda (line) (search ,key line))
-                             (file-lines ,file))
-      ,@body))
 
-;; look for export lines in my .bashrc
+> (for (idx line) (grepper "defun" "/home/colony/projects/gtwiwtg/examples.lisp")
+     (format t "~4a: ~a~%" idx line))
 
-> (let ((count 0))
-    (a-kind-of-grep line "export" "~/.bashrc" 
-        (incf count)
-        (print line)))
-      
-"export PATH=$HOME/.roswell/bin:$PATH" 
-"export PATH=$HOME/.local/bin:$PATH" 
-2
+
+12  : (defun prime-p (n)
+19  : (defun all-primes ()
+37  : (defun fibs ()
+52  : (defun fill-and-insert (idx elem vec buffer)
+69  : (defun thread-through (elem vec)
+86  : (defun perms (vec)
+104 : ;; (defun perms (vec)
+115 : (defun grepper (pattern file)
 
 ```
 

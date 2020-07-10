@@ -113,10 +113,9 @@ vector VEC, one at a time."
 
 ;;; A kind of Grep ;;;
 
-(defmacro a-kind-of-grep (match-var key file &rest body)
-  `(for ,match-var (filter! (lambda (line) (search ,key line))
-                            (file-lines ,file))
-     ,@body))
+(defun grepper (pattern file)
+  (filter! (lambda (idx-line) (search pattern (second idx-line)))
+           (zip! (range) (file-lines file))))
 
 
 ;; find all export expressions in my bashrc file
