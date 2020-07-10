@@ -22,7 +22,7 @@
   ((dirty-p
     :accessor dirty-p
     :initform nil
-    :documentation "Indicates whether or not any this generator has
+    :documentation "Indicates whether or not this generator has
     generated any values yet, or if it should behave as if it has.")
    (stopped-p
     :accessor stopped-p
