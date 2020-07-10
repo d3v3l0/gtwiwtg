@@ -79,6 +79,16 @@
     (incf index)
     (elt sequence index)))
 
+(a-class list-backed-generator! (generator!)
+         list)
+
+(defmethod has-next-p ((g list-backed-generator!))
+  (with-slots (stopped-p list) g
+    (unless stopped-p (consp list))))
+
+(defmethod next ((g list-backed-generator!))
+  (pop (slot-value g 'list)))
+
 (a-class thunk-backed-generator! (generator!)
          next-p-fn
          next-fn
@@ -163,9 +173,12 @@ If TO is NIL, then the generator produces an infinite sequence.
 generator. The resulting generator will generate exactly the memebers
 of the sequence."
   (assert (typep sequence 'sequence))
-  (make-instance 'sequence-backed-generator!
-                 :sequence sequence
-                 :index (1- start)))
+  (if (consp sequence)
+      (make-instance 'list-backed-generator!
+                     :list (nthcdr start sequence))
+      (make-instance 'sequence-backed-generator!
+                     :sequence sequence
+                     :index (1- start))))
 
 (defun from-thunk-until (thunk &optional (until (constantly nil)) clean-up)
   "Creates a generator that produces a series of value by successively
