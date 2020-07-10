@@ -273,23 +273,22 @@ consed during consumption. See the docstrings for both forms for more details.
 (Or, there's a reason those forms all end in `!`.)
 
 You must be cautious when incrementally building up generators. The
-reason for caution is that generators cannot be "combined twice", but
-you may be tempted to try doing just that. 
+reason for caution is that generators cannot be "combined twice". If
+you are storing intermediate generators in a `let` binding, for
+example, you may be tempted to pass those bound variables into
+generator combination functions more than once. If you do, an error
+will be signalled.
 
-I.e.These generators are not functional objects. Combining them with
-one other effectively "destroys" them as independent objects, by
-marking them as unfit for use in other combining forms.
+_The general rule_ is: if you pass a generator to more than one
+combining function (those whose names end in `!`), or if you pass the
+same generator to one such a function at two argument positions, then
+an error will be raised and new the generator will not be built.
 
-[Aside: This was done for efficiency reasons, and I might make a
-"purely functional" parallel universe for these generators in the
-future.]
-
-The library tries to help you out by signalling an error whenever you
-try to do something that would lead to _mangled memory_.  Each
-docstring provides details about when error conditions are signalled
-for each combining form. Don't quote me on it, but I *think* that the
+Internally, the library keeps track of whether or not generators have
+been combined with others. Don't quote me on it, but I *think* that the
 library will prevent you from making generators with surprising
 (i.e. erroneous) behavior.
+
 
 Here is an example to show you the illegal behavior:
 
@@ -304,14 +303,14 @@ Here is an example to show you the illegal behavior:
 ```
 
 The gist is that we tried to zip a generator with itself. Such
-behavior is not allowed. Generally speaking, if you pass a generator
-to more than one combining form (all forms that end in a `!`), or if
-you pass the same generator to such a form twice, then an error will
-be raised and new the generator will not be built.
+behavior is not allowed. 
 
 An ongoing goal is to make those errors nicer to look at so that you
 can more easily pin-point where you goofed.
 
+[Aside: This was done for efficiency reasons, and I might make a
+"purely functional" parallel universe for these generators in the
+future.]
 
 ### The Fundamental Consumer
 
