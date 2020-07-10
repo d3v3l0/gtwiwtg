@@ -508,20 +508,32 @@ Error Conditions:
 
 
 (defun skip! (n gen)
-  "Returns the generator GEN but without the first N elements. 
+  "EXPERIMENTAL. Might be removed.
 
-An error will be signalled if GEN does hot have N ore more elements."
-  (dotimes (x n) (next gen))
+Returns the generator GEN but without the first N elements. 
+
+Caveats:
+
+ - It is possible that SKIP! will skip the whole source generator,
+   returning an empty gernator.
+"
+  (dotimes (x n) (when (has-next-p gen) (next gen)))
   (setf (slot-value gen 'dirty-p) nil)
   gen)
 
 (defun skip-while! (pred gen)
-  "Returns the generator GEN but without the first N elements for
+  "EXPERIMENTAL. Might be removed.
+
+Returns the generator GEN but without the first N elements for
 which PRED is non-nil. 
 
-An error will be signalled if GEN runs out of elements before PRED
-returns NIL."
-  (loop :while (funcall pred (next gen)))
+Caveat:
+ - It is possible that, for finite generators, skip-while! will skip
+   the whole generated sequence. 
+ - If the generator is infinite, then skip-while! MIGHT never return.
+"
+  (loop :while (and (has-next-p gen)
+                    (funcall pred (next gen))))
   (setf (slot-value gen 'dirty-p) nil)
   gen)
 
@@ -533,11 +545,10 @@ Return a list of COUNT copies of GEN.
 
 Caveat: 
 
- - The generators produced by NFURCATE! allocate new memory as you
-   consume them. This allocation can be O(COUNT * SIZE) in space
+ - The generators produced by NFURCATE! allocate new memory as they
+   are consumed. This allocation can be O(COUNT * SIZE) in space
    complexity, where SIZE is the size of GEN. Hence, use with caution
    on infinite generators.
-
 "
   (make-dirty source-generator)
   (let ((qs (loop :for _ :below count :collect (make-queue)))
@@ -597,13 +608,22 @@ Caveat:
 (defmacro for (var-exp gen &body body)
   "The basic generator consumer.
 
-VAR-EXP can be either a symbol, or a form sutible for using as the
-binding form in DESTRUCTURING-BIND.
+VAR-EXP can be either a symbol, or a form suitable for using as the
+binding form in a DESTRUCTURING-BIND.
 
 GEN is an expression that should evaluate to a generator.
 
-BODY is any form you like, it will be evaluated for each value
-procuded by GEN.
+BODY is a list of any forms you like. These forms will be evaluated
+for each value produced by GEN.
+
+FOR akes care of running any clean up that the generator
+requires. E.g. If the generator is backed by an open stream, the
+stream will be closed. E.g. If the generator was built using
+FROM-THUNK-UNTIL, then the CLEAN-UP thunk will be run before FOR
+exits.
+
+Every other consumer is built on top of FOR, and hence, every other
+consumer will also perform clean up.
 
 Example:
 
@@ -633,15 +653,15 @@ A -- 4
 
 ACC is a symbol and INIT-VAL is any lisp expression.  ACC is where
 intermediate results are accmulated. INIT-VAL is evaluated to
-initialize the value of ACC.
+initialize ACC.
 
-VAR-EXP can be either a symbol, or a form sutible for using as the
+VAR-EXP can be either a symbol, or a form suitable for using as the
 binding form in DESTRUCTURING-BIND.
 
 GEN is an expression that should evaluate to a generator.
 
-EXPR is a sigle lisp expression whose value is bound to ACC on each
-iteration.
+EXPR is a sigle lisp expression the value of which becomes bound to
+ACC on each iteration.
 
 When iteration has concluded, ACC becomes the value of the FOLD form.
 
