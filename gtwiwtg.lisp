@@ -15,7 +15,7 @@
 (defgeneric stop (gen)
   (:documentation "Explicitly stops the generator. Specialize :after
   methods to implement any clean-up that needs to be done when the
-  generator finishes."))
+  generator has been consumed."))
 
 ;;; Base Generator Class ;;; 
 
@@ -29,7 +29,8 @@
     :accessor stopped-p
     :initform nil
     :documentation "Indicates whether or not this generator has been
-    explicitly stopped.")))
+    explicitly stopped. All consumers explicitly stop the generators
+    the consume.")))
 
 (defmethod stop ((g generator!))
   (setf (stopped-p g) t))
@@ -424,29 +425,29 @@ Here is an example:
 
 Error Conditions:
  - If GEN has been used elsewhere, an error will be signalled.
- - If GEN is an empty generator, an error will be signalled.
 "
   (sully-when-clean (list gen))
-  (let ((sub-gen (funcall fn (next gen))))
-    (from-thunk-until
-     (lambda () (next sub-gen))
-
-     (lambda ()
-       (loop
-          :until (has-next-p sub-gen)
-          :while (has-next-p gen)
-          :do
-            (stop sub-gen)
-            (setf sub-gen (funcall fn (next gen))))
-
-       ;; the 'until' thunk must return t when we should stop generating
-       ;; hence:
-       (not (or (has-next-p sub-gen)
-                (has-next-p gen))))
-
-     (lambda ()
-       (stop gen)
-       (when sub-gen (stop sub-gen))))))
+  (if (not (has-next-p gen)) gen 
+      (let ((sub-gen (funcall fn (next gen))))
+        (from-thunk-until
+         (lambda () (next sub-gen))
+         
+         (lambda ()
+           (loop
+              :until (has-next-p sub-gen)
+              :while (has-next-p gen)
+              :do
+                (stop sub-gen)
+                (setf sub-gen (funcall fn (next gen))))
+           
+           ;; the 'until' thunk must return t when we should stop generating
+           ;; hence:
+           (not (or (has-next-p sub-gen)
+                    (has-next-p gen))))
+         
+         (lambda ()
+           (stop gen)
+           (when sub-gen (stop sub-gen)))))))
 
 
 (defun concat! (gen &rest gens)
