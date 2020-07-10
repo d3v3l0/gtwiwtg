@@ -15,7 +15,6 @@
            #:file-lines
            #:file-chars
            #:file-bytes
-           #:yield-to!
            #:map!
            #:filter!
            #:inflate!

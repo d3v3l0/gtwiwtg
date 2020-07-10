@@ -252,11 +252,6 @@ Here are some simple examples of their use:
 - `(skip-while! pred gen)` produces a generator by skippng elements of `gen` while `pred` is `t`
 - `(merge! comp gen1 gen2 &rest gens)` emulates the behavior of `merge` but for generators
 
-There's also `yield-to!`, but it is kind of dark magic. If, when you
-are creating your generators, you find yourself needing to to stop and
-restart generators mid-iteration, then check out the docstring for
-`yield-to!`. I may end up removing it from the library because its use
-could easily lead to confusing situations.
 
 ### The Fundamental Consumer
 
