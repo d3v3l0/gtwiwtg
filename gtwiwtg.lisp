@@ -1,43 +1,118 @@
 (defpackage #:gtwiwtg (:use #:cl))
 (in-package :gtwiwtg)
 
-(defclass generator! ()
-  ((dirty-p
-    :accessor dirty-p
-    :initform nil)
-   (state
-    :accessor gen-state
-    :initarg :state
-    :initform (error "no state"))
-   (next-p-fn
-    :accessor next-p-fn
-    :initarg :next-p-fn
-    :initform (error "no next-p"))
-   (next-fn
-    :accessor next-fn
-    :initarg :next-fn
-    :initform (error "no next-fn"))))
+;;; Generator Protocol ;;;
 
 (defgeneric next (gen)
   (:documentation "gets next if available. Throws an error otherwise."))
 
-(defmethod next ((gen generator!))
-  (assert (has-next-p gen))
-  (with-slots (state next-fn dirty-p) gen
-    (setf dirty-p t)
-    (multiple-value-bind (val new-state) (funcall next-fn state)
-      (setf state new-state)
-      val)))
-
 (defgeneric has-next-p (gen)
   (:documentation "returns true if next can be called on this generator!"))
 
-(defmethod has-next-p ((gen generator!))
-  (with-slots (next-p-fn state) gen
-    (funcall next-p-fn state)))
+(defgeneric stop (gen)
+  (:documentation "stops the generator"))
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun make-keyword (symb)
+    (read-from-string (format nil ":~a" symb))))
+
+;;; Utility Class Builder ;;; 
+
+(defmacro a-class (name supers &rest slots)
+  `(defclass ,name ,supers
+     ,(mapcar (lambda (def)
+                 (if (consp def)
+                     `(,(car def)
+                        :initarg ,(make-keyword (car def))
+                        :initform ,(second def))
+                     `(,def :initarg ,(make-keyword def)
+                            :initform nil)))
+               slots)))
+
+;;; Base Generator Class ;;; 
+
+(defclass generator! ()
+  ((dirty-p
+    :accessor dirty-p
+    :initform nil
+    :documentation "Indicates whether or not this any of this
+    generator has been consumed, or should behave as if it has been.")
+   (stopped-p
+    :accessor stopped-p
+    :initform nil
+    :documentation "Indicates whether or not this generator has been
+    explicitly stopped.")))
+
+(defmethod stop ((g generator!))
+  (setf (stopped-p g) t))
 
 (defun make-dirty (g) (setf (dirty-p g) t))
+
+;;; Generator Classes ;;; 
+
+(a-class range-backed-generator! (generator!)
+         (at 0) to (by 1) inclusive (comparator #'<))
+
+(defmethod has-next-p ((g range-backed-generator!))
+  (with-slots (to current comparator by at stopped-p) g
+    (unless stopped-p
+      (or (not to)
+          (funcall comparator
+                   (+ by at)
+                   to)))))
+
+(defmethod next ((g range-backed-generator!))
+  (with-slots (at by) g
+    (incf at by)
+    at))
+
+(a-class sequence-backed-generator! (generator!)
+         sequence index)
+
+(defmethod has-next-p ((g sequence-backed-generator!))
+  (with-slots (stopped-p index sequence) g
+    (unless stopped-p
+      (< index (1- (length sequence))))))
+
+(defmethod next ((g sequence-backed-generator!))
+  (with-slots (index sequence) g
+    (incf index)
+    (elt sequence index)))
+
+(a-class thunk-backed-generator! (generator!)
+         next-p-fn
+         next-fn
+         stop-fn)
+
+(defmethod has-next-p ((g thunk-backed-generator!))
+  (with-slots (stopped-p next-p-fn) g
+    (unless stopped-p (funcall next-p-fn))))
+
+(defmethod next ((g thunk-backed-generator!))
+  (funcall (slot-value g 'next-fn)))
+
+(defmethod stop :after ((g thunk-backed-generator!))
+  (with-slots (stop-fn) g
+    (when stop-fn
+      (funcall stop-fn))))
+
+(a-class stream-backed-generator! (generator!)
+         stream reader)
+
+(defmethod has-next-p ((g stream-backed-generator!))
+  (with-slots (stopped-p stream) g
+    (unless stopped-p
+      (open-stream-p stream))))
+
+(defmethod next ((g stream-backed-generator!))
+  (with-slots (reader stream) g
+    (let ((read-value (funcall reader stream)))
+      (unless read-value
+        (close stream))
+      read-value)))
+
+(defmethod stop :after ((g stream-backed-generator!))
+  (close (slot-value g 'stream)))         
 
 ;;; CONSTRUCTORS
 
@@ -72,70 +147,42 @@ If TO is NIL, then the generator produces an infinite sequence.
   (let ((comparator (if (plusp by)
                         (if inclusive #'<= #'<)
                         (if inclusive #'>= #'>))))
-    (make-instance 'generator!
-                   :state (list (- from by) to)
-                   :next-p-fn (lambda (state) (or (not to)
-                                                  (funcall comparator
-                                                           (+ by  (first state))
-                                                           (second state))))
-                   :next-fn (lambda (state)
-                              (incf (car state) by)
-                              (values (car state) state)))))
+    (make-instance 'range-backed-generator!
+                   :comparator comparator
+                   :inclusive inclusive
+                   :at (- from by)
+                   :to to
+                   :by by)))
 
 (defun times (n)
   "Shorthand for (RANGE :TO N)"
   (range :to n))
 
-(defun seq (sequence)
+
+(defun seq (sequence &key (start 0))
   "Turns a sequecne (a list, vector, string, etc) into a
 generator. The resulting generator will generate exactly the memebers
 of the sequence."
-  (make-instance 'generator!
-                 :state 0
-                 :next-p-fn (lambda (state)
-                              (< state (length sequence)))
-                 :next-fn (lambda (state)
-                            (let ((val (elt sequence state)))
-                              (values val (1+ state))))))
-
-(defun repeater (&rest args)
-  "Produces a generator that produces an infinite series consisting in
-the values passed as ARGS looped forever."
-  (make-instance 'generator!
-                 :state (copy-list args)
-                 :next-p-fn (constantly t)
-                 :next-fn (lambda (state)
-                            (if (cdr state)
-                                (values (car state) (cdr state))
-                                (values (car args) (copy-list (cdr args)))))))
+  (make-instance 'sequence-backed-generator!
+                 :sequence sequence
+                 :index (1- start)))
 
 
-(defun noise (&optional (arg 1.0))
-  "Creates a generator that produces an infinite series of random
-  numbers that are the result of calling (RANDOM ARG)."
-  (make-instance 'generator!
-                 :state nil
-                 :next-p-fn (constantly t)
-                 :next-fn (lambda (state)
-                            (declare (ignore state))
-                            (values (random arg) nil))))
-
-
-
-
-(defun from-thunk-until (thunk &optional (until (constantly nil)))
+(defun from-thunk-until (thunk &optional (until (constantly nil)) clean-up)
   "Creates a generator that produces a series of value by successively
 calling (FUNCALL THUNK).  The iterator stops whenever (FUNCALL UNTIL)
 is non null.
 
+If a CLEAN-UP thunk is supplied, it will be run after consumption of
+the new generator has finished. I.e. when passing this form to a
+consumer such as FOR, FOLD, COLLECT, etc.
+
 By default, UNTIL is the function (CONSTANTLY NIL). I.e. it will
 generate forever."
-  (make-instance 'generator!
-                 :state nil
-                 :next-p-fn (lambda (ignore) (declare (ignore ignore)) (not (funcall until)))
-                 :next-fn (lambda (ignore)
-                            (declare (ignore ignore))
-                            (values (funcall thunk) nil))))
+  (make-instance 'thunk-backed-generator! 
+                 :stop-fn clean-up
+                 :next-p-fn (complement until)
+                 :next-fn thunk))
 
 
 (defun from-thunk (thunk)
@@ -166,10 +213,10 @@ should be K, the number of arguments acepted by REC.
 
 Example
 
-> (let ((fibs (from-recurrence (lambda (n-1 n-2) (+ n-1 n-2)) 1 0)))
+> (let ((fibs (from-recurrence #'+ 1 0)))
      (take 10 fibs))
 
-(1 1 2 3 5 8 13 21 34 55)
+(1 2 3 5 8 13 21 34 55 89)
 
 "
   (let* ((history (cons n-1 n-m))
@@ -179,6 +226,24 @@ Example
                      nth))))
     (from-thunk thunk)))
 
+
+(defun repeater (&rest args)
+  "Produces a generator that produces an infinite series consisting in
+the values passed as ARGS looped forever."
+  (let ((state (copy-list args)))
+    (from-thunk
+     (lambda ()
+       (unless (car state)
+         (setf state (copy-list args)))
+       (pop state)))))
+
+
+(defun noise (&optional (arg 1.0))
+  "Creates a generator that produces an infinite series of random
+  numbers that are the result of calling (RANDOM ARG)."
+  (from-thunk (lambda () (random arg))))
+
+
 (defun from-input-stream (stream stream-reader)
   "Create a generator from a STREAM.
 
@@ -186,109 +251,57 @@ You must supply as STREAM-READER function that accepts the stream as
 its only argument and returns NIL if the stream has run out of input,
 Non-NIL otherwise.
 
-This function will close the stream when it reaches the end.
-
 A quirk is that the last value returned from this generator is NIL.
 
-Avoid using with TAKE or PICK-OUT as the file stream will not be closed.
+Consumers of the new generator will ensure that the stream is properly
+closed..
 
-If you need to use TAKE or PICK-OUT or other consumers that will not
-consume the whole generator, you should evaluate the whole generator
-within an UNWIND-PROTECTing form like WITH-OPEN-FILE.
+Here is an example:
 
-e.g.
-
-This is fine:
-
-(with-open-file (input \"hey.txt\")
-       (take 2 (from-input-stream
-                 input
-                 (lambda (s) (read-char s nil nil)))))
-(#\\h #\\e)
-
-But this isn't:
-
-(take 2 (from-input-stream
+ (take 2 (from-input-stream
           (open \"hey.txt\")
           (lambda (s) (read-char s nil nil))))
 
-(#\\h #\\e)
+ (#\\h #\\e)
+
 "
-  (make-instance 'generator!
-                 :state stream
-                 :next-p-fn #'open-stream-p
-                 :next-fn (lambda (stream)
-                            (let ((val (funcall stream-reader stream)))
-                              (if val
-                                  (values val stream)
-                                  (progn
-                                    (close stream)
-                                    (values nil stream)))))))
+  (make-instance 'stream-backed-generator!
+                 :stream stream
+                 :reader stream-reader))
 
 
 (defun file-lines (file)
   "Creates a generator that produces the lines of a file.  The stream
 to the file is closed when the generator finishes.
 
-FILE is either a path to a file, or is an open character input stream
-to a file.
+FILE is either a path to a file.
 
 Returns NIL on the last iteration.
 
-Avoid using with TAKE or PICK-OUT as the file stream will not be closed.
-
-If you need to use TAKE or PICK-OUT or other consumers that will not
-consume the whole generator, you should evaluate the whole generator
-within an UNWIND-PROTECTing form such as WITH-OPEN-FILE.
-
-See the documentation for FROM-INPUT-STREAM for an example of the
-distinction.
 "
-  (from-input-stream (if (streamp file) file (open file))
+  (from-input-stream (open file)
                      (lambda (stream) (read-line stream nil nil))))
 
 (defun file-chars (file)
   "Creates a generator that produces the characters of a file. The
 stream to the file is closed when the generator finishes.
 
-FILE is either a path to a file, or is an open character input stream
-to a file.
+FILE is either a path to a file.
 
 Returns NIL on the last iteration.
-
-Avoid using with TAKE or PICK-OUT as the file stream will not be closed.
-
-If you need to use TAKE or PICK-OUT or other consumers that will not
-consume the whole generator, you should evaluate the whole generator
-within an UNWIND-PROTECTing form such as WITH-OPEN-FILE.
-
-See the documentation for FROM-INPUT-STREAM for an example of the
-distinction.
-
 "
-  (from-input-stream (if (streamp file) file (open file))
+  (from-input-stream (open file)
                      (lambda (stream) (read-char stream nil nil))))
 
 (defun file-bytes (file)
   "Creates a generator that produces the bytes of a file. The
 stream to the file is closed when the generator finishes.
 
-FILE is either a path to a file, or is an open byte input stream to a
-file.
+FILE is either a path to a file.
 
 Returns NIL on the last iteration.
-
-Avoid using with TAKE or PICK-OUT as the file stream will not be closed.
-
-If you need to use TAKE or PICK-OUT or other consumers that will not
-consume the whole generator, you should evaluate the whole generator
-within an UNWIND-PROTECTing form such as WITH-OPEN-FILE.
-
-See the documentation for FROM-INPUT-STREAM for an example of the
-distinction.
 "
-  (from-input-stream (if (streamp file) file
-                         (open file :element-type '(unsigned-byte 8)))
+  (from-input-stream (open file :element-type '(unsigned-byte 8))
                      (lambda (stream) (read-byte stream nil nil))))
 
 ;;; Some utilities
@@ -314,7 +327,6 @@ distinction.
 (defun all-different (things)
   (= (length things) (length (remove-duplicates things))))
 
-
 (defun all-clean (gens)
   (every (complement #'dirty-p) gens))
 
@@ -322,35 +334,6 @@ distinction.
   (and (all-clean gens) (all-different gens)))
 
 ;;; MODIFIERS and COMBINATORS
-
-(defmethod yield-to! (gen1 gen2)
-  "GEN1 passes generation control to GEN2. This control will be return
-to GEN1 after GEN2 is done. This function modifies GEN1.
-
-Hence, YIELD-TO! can be used within an iteration to conditionally dive
-off into some new iteration, knowing that business as usuall will
-resume when the \"sub iteration\" finishes.
-
-It is kind of dark magic, and so I don't recommend using it except in
-the rareest of circumstances."
-  (assert (not (eq gen1 gen2)))
-  (make-dirty gen2)
-  (let ((orig-pred (next-p-fn gen1))
-        (orig-fn (next-fn gen1)))
-    (with-slots ((s1 state) (p1 next-p-fn) (f1 next-fn)) gen1
-      (with-slots ((s2 state) (p2 next-p-fn) (f2 next-fn)) gen2
-        (setf s1 (list s1 s2))
-        (setf p1 (lambda (state)
-                   (or (funcall p2 (second state))
-                       (funcall orig-pred (first state)))))
-        (setf f1 (lambda (state)
-                   (if (funcall p2 (second state))
-                       (multiple-value-bind (val new-s2) (funcall f2 (second state))
-                         (values val (list (first state) new-s2)))
-                       (multiple-value-bind (val new-s1) (funcall orig-fn (car state))
-                         (values val (list new-s1 (second state)))))))))))
-
-
 
 (defun map! (map-fn gen &rest gens)
   "Maps a function over a number of generators, returning a generator
@@ -365,34 +348,17 @@ generators.
 Error Conditions:
  - If any of the generators compare EQL an error will be signalled
  - If any of the generators have been used elsewhere, an error will be signalled.
-
-Caveat: 
- - This function modifies and returns its first generator argument.
 "
-  (assert (all-good (list* gen gens)))
-  (dolist (g gens) (make-dirty g)) ;; to ensure gens wont be re-used after use here.
-
-  (let ((orig-fns (mapcar #'next-fn (cons gen gens)))
-        (orig-preds (mapcar #'next-p-fn (cons gen gens))))
-    (setf (gen-state gen) (mapcar #'gen-state (cons gen gens))
-          (next-p-fn gen) (lambda (states)
-                            (loop
-                               :for state :in states
-                               :for pred :in orig-preds
-                               :unless (funcall pred state) :do (return nil)
-                               :finally (return t)))
-          (next-fn gen) (lambda (states)
-                          (let ((args)
-                                (new-states))
-                            (loop
-                               :for state :in states
-                               :for fn :in orig-fns
-                               :do (multiple-value-bind (val new-state) (funcall fn state)
-                                     (push val args)
-                                     (push new-state new-states)))
-                            (values (apply map-fn (reverse args))
-                                    (reverse new-states))))))
-  gen)
+  (let ((all-gens (list* gen gens)))
+    (assert (all-good all-gens))
+    (dolist (g all-gens) (make-dirty g))
+    (from-thunk-until
+     (lambda ()
+       (apply map-fn (mapcar #'next all-gens)))
+     (lambda ()
+       (some (complement #'has-next-p) all-gens))
+     (lambda ()
+       (dolist (g all-gens) (stop g))))))
 
 (defun filter! (pred gen)
   "Produces a generator that filters out members of GEN that are NIL
@@ -400,37 +366,23 @@ when applied to PRED.
 
 Error Condition:
  - If GEN has been used elsewhere, an error will be signalled.
-
-Caveat:
- - This function modifies and returns its generator argument.
-
 "
   (assert (not (dirty-p gen)))
-  (let* ((orig-fn (next-fn gen))
-         (orig-p-fn (next-p-fn gen))
-         (last-good nil)
-         (last-known-state (gen-state gen))
-         (new-next-p-fn (lambda (state)
-                          (or last-good
-                              (loop :while (funcall orig-p-fn state)
-                                 :do (multiple-value-bind (val new-state) (funcall orig-fn state)
-                                       (if (funcall pred val)
-                                           (progn  (setf last-good (list val))
-                                                   (setf last-known-state (list new-state))
-                                                   (return t))
-                                           (setf state new-state)))
-                                 :finally (return nil))))))
-
-    (setf (next-p-fn gen) new-next-p-fn)
-
-    (setf (next-fn gen) (lambda (state)
-                          (declare (ignore state))
-                          (let ((tmp-state (car last-known-state))
-                                (tmp-val (car last-good)))
-                            (setf last-good nil)
-                            (setf last-known-state nil)
-                            (values tmp-val tmp-state))))
-    gen))
+  (make-dirty gen)
+  (let (on-deck)
+    (from-thunk-until
+     (lambda () on-deck)
+     (lambda ()
+       (loop
+          :while (has-next-p gen)
+          :for candidate = (next gen)
+          :when (funcall pred candidate)
+          :do (progn
+                (setf on-deck candidate)
+                (return nil))
+          :finally (return t)))
+     (lambda ()
+       (stop gen)))))
 
 
 (defun inflate! (fn gen)
@@ -454,28 +406,29 @@ Here is an example:
 
 Error Conditions:
  - If GEN has been used elsewhere, an error will be signalled.
-
-Caveat: 
- - INFLATE! Modifies and returns its generator argument.
 "
   (assert (not (dirty-p gen)))
-  (let ((orig-fn (next-fn gen))
-        (orig-p (next-p-fn gen))
-        (orig-state (gen-state gen)))
-    (multiple-value-bind (val state) (funcall orig-fn orig-state)
-      (setf orig-state state
-            (gen-state gen) (funcall fn val)
-            (next-p-fn gen) (lambda (sub)
-                              (or (has-next-p sub)
-                                  (funcall orig-p orig-state)))
-            (next-fn gen) (lambda (sub)
-                            (if (has-next-p sub)
-                                (values (next sub) sub)
-                                (multiple-value-bind (val state) (funcall orig-fn orig-state)
-                                  (setf orig-state state)
-                                  (let ((new-sub (funcall fn val)))
-                                    (values (next new-sub) new-sub))))))))
-  gen)
+  (make-dirty gen)
+
+  (let ((sub-gen (funcall fn (next gen))))
+    (from-thunk-until
+     (lambda () (next sub-gen))
+
+     (lambda ()
+       (loop
+          :until (has-next-p sub-gen)
+          :while (has-next-p gen)
+          :do
+            (stop sub-gen)
+            (setf sub-gen (funcall fn (next gen))))
+
+       ;; the 'until' thunk must return t when we should stop generating
+       ;; hence:
+       (not (or (has-next-p sub-gen)
+                (has-next-p gen))))
+     (lambda ()
+       (stop gen)
+       (when sub-gen (stop sub-gen))))))
 
 
 (defun concat! (gen &rest gens)
@@ -493,7 +446,7 @@ Caveat:
  - CONCAT! Modifies and returns its first argument.
 "
   (assert (all-good (list* gen gens)))
-  (dolist (g gens) (make-dirty g)) ;; to help ensure that gens can be combined elsewhere
+  (dolist (g (list* gen gens)) (make-dirty g)) 
   (inflate! #'identity (seq (list* gen gens))))
 
 (defun zip! (gen &rest gens)
@@ -540,8 +493,12 @@ Error Conditions:
                               (nconc (when (cdr vals) (list (seq (cdr vals))))
                                      all-gens)))
          (car vals)))
+
      (lambda ()
-       (null all-gens)))))
+       (null all-gens))
+
+     (lambda ()
+       (dolist (g all-gens) (stop g))))))
 
 
 (defun skip! (n gen)
@@ -563,7 +520,7 @@ returns NIL."
   gen)
 
 
-(defun nfurcate! (count gen)
+(defun nfurcate! (count source-generator)
   "EXERIMENTAL. MAY BE REMOVED
 
 Return a list of COUNT copies of GEN.
@@ -576,26 +533,36 @@ Caveat:
    on infinite generators.
 
 "
-  (make-dirty gen)
-  (let ((qs (loop :for _ :below count :collect (make-queue))))
-    (loop :for build-q :in qs
+  (make-dirty source-generator)
+  (let ((qs (loop :for _ :below count :collect (make-queue)))
+        (stop-cells (loop :for _ :below count :collect (list nil))))
+    (loop
+       :for build-q :in qs
+       :for stop-cell :in stop-cells  
        :collect
-         (let ((local-q build-q))
+         (let ((local-q build-q)
+               (local-stop stop-cell))
+
            (from-thunk-until
             (lambda ()
               (cond ((not (queue-empty-p local-q))
                      (dequeue local-q))
 
-                    ((has-next-p gen)
-                     (let ((next-v (next gen)))
+                    ((has-next-p source-generator)
+                     (let ((next-v (next source-generator)))
                        (loop :for q :in qs :do (enqueue next-v q))
                        (dequeue local-q)))
 
                     (t (error "Attempted to get next from a spent generator."))))
 
             (lambda ()
-              (and (not (has-next-p gen))
-                   (queue-empty-p local-q))))))))
+              (and (not (has-next-p source-generator))
+                   (queue-empty-p local-q)))
+
+            (lambda ()
+              (setf (car local-stop) t)
+              (when (every #'car stop-cells)
+                (stop source-generator))))))))
 
 (defun partition! (pred gen)
   "EXPERIMENTAL. MAY BE REMOVED. 
@@ -634,8 +601,8 @@ procuded by GEN.
 
 Example:
 
-(for (x y) (zip! (repeater 'a 'b 'c) (times 5))
-  (format t \"~a -- ~a~%\" x y))
+ (for (x y) (zip! (repeater 'a 'b 'c) (times 5))
+   (format t \"~a -- ~a~%\" x y))
 
 A -- 0
 B -- 1
@@ -652,7 +619,8 @@ A -- 4
        (loop
           :while (has-next-p ,gen-var)
           :do
-            ,expr-body))))
+            ,expr-body)
+       (stop ,gen-var))))
 
 (defmacro fold ((acc init-val) (var-exp gen) expr)
   "The accumulating generator consumer.
