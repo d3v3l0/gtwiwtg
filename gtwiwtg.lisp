@@ -7,14 +7,15 @@
 
 (defgeneric next (gen)
   (:documentation "Returns the next value of this generator, if
-  available. Unspecified behavior if the generator has been exausted."))
+  available. Unspecified behavior if the generator has been exhausted."))
 
 (defgeneric has-next-p (gen)
   (:documentation "Returns true if next can be called on the generator"))
 
 (defgeneric stop (gen)
   (:documentation "Explicitly stops the generator. Specialize :after
-  methods with any generator clean-up that needs to be done."))
+  methods to implement any clean-up that needs to be done when the
+  generator finishes."))
 
 ;;; Base Generator Class ;;; 
 
