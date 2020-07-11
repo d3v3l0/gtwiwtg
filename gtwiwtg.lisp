@@ -629,6 +629,26 @@ Caveat:
     (list (filter! pred gen1)
           (filter! (complement pred) gen2))))
 
+(defun intersperse! (gen1 gen2 &rest gens)
+  (inflate! #'seq (apply #'zip! gen1 gen2 gens)))
+
+(defun truncate! (n gen)
+  (map! #'first (zip! gen (times n))))
+
+(defun inject! (fn gen)
+  (map! (lambda (x) (funcall fn x) x) gen))
+
+(defun disperse! (n gen)
+  (loop
+     :for i :below n
+     :for cloned :in  (nfurcate! n gen)
+     :collect
+       (let ((j i))
+         (map! #'second
+               (filter! (lambda (pair) (= j (mod (first pair) n)))
+                        (indexed! cloned))))))
+
+
 ;;; CONSUMERS
 
 (defmacro for (var-exp gen &body body)
