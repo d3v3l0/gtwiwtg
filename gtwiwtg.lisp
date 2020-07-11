@@ -670,7 +670,7 @@ Possibly good for debugging.
 Example: 
 
 > (map! #'reverse
-        (inejct! #'print ; look at values before they're reversed
+        (inject! #'print ; look at values before they're reversed
                  (zip! (range)
                        (repeater :cool :beans)
                        (seq \"banzai!\"))))
@@ -684,7 +684,11 @@ Example:
  (4 :COOL #\a) 
  (5 :BEANS #\i) 
 
- ((#\b :COOL 0) (#\a :BEANS 1) (#\n :COOL 2) (#\z :BEANS 3) (#\a :COOL 4)
+ ((#\b :COOL 0)  ; and this is what collect returns
+  (#\a :BEANS 1) 
+  (#\n :COOL 2) 
+  (#\z :BEANS 3) 
+  (#\a :COOL 4)
   (#\i :BEANS 5))
 
 "
