@@ -26,6 +26,10 @@
            #:skip-while!
            #:nfurcate!
            #:partition!
+           #:intersperse!
+           #:truncate!
+           #:inject!
+           #:disperse!
            #:for
            #:fold
            #:collect
