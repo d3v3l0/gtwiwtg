@@ -630,15 +630,75 @@ Caveat:
           (filter! (complement pred) gen2))))
 
 (defun intersperse! (gen1 gen2 &rest gens)
+  "Produces a generator that intersperses one value from each of its
+argument generators, one after the other, until any of those
+generators run out of values.
+
+Examples:
+
+> (intersperse! (seq '(:name :job :hobbies))
+                (seq '(\"buckaroo banzai\" 
+                       \"rocker\" 
+                       (\"neuroscience\" 
+                        \"particle physics\"
+                        \"flying fighter jets\"))))
+
+> (collect *)
+
+ (:NAME \"buckaroo banzai\" :JOB \"rocker\" :HOBBIES
+  (\"neuroscience\" \"particle physics\" \"flying fighter jets\"))
+
+> (intersperse! (times 5) (repeater 'a 'b 'c) (range :by -10))
+
+> (collect *)
+
+ (0 A 0 1 B -10 2 C -20 3 A -30 4 B -40)
+ "
   (inflate! #'seq (apply #'zip! gen1 gen2 gens)))
 
 (defun truncate! (n gen)
+  "Shrinks a generator to generate a series of at most N values."
   (map! #'first (zip! gen (times n))))
 
 (defun inject! (fn gen)
+  "Injects an effect into a generator. Use this to add a side-effect
+to the value generation process. The new generator produces exactly
+the same values as GEN.
+
+Possibly good for debugging.
+
+Example: 
+
+> (map! #'reverse
+        (inejct! #'print ; look at values before they're reversed
+                 (zip! (range)
+                       (repeater :cool :beans)
+                       (seq \"banzai!\"))))
+
+> (collect *)
+
+ (0 :COOL #\b)     ;these are printed to stdout
+ (1 :BEANS #\a) 
+ (2 :COOL #\n) 
+ (3 :BEANS #\z) 
+ (4 :COOL #\a) 
+ (5 :BEANS #\i) 
+
+ ((#\b :COOL 0) (#\a :BEANS 1) (#\n :COOL 2) (#\z :BEANS 3) (#\a :COOL 4)
+  (#\i :BEANS 5))
+
+"
   (map! (lambda (x) (funcall fn x) x) gen))
 
 (defun disperse! (n gen)
+  "Produces a list of N gnerators, G1,...,GN.
+
+G1 produces every Nth value of GEN, including first value.
+G2 produces every Nth+1 value of GEN, including the second value.
+...
+GN produces every Nth + (N-1) value of GEN, including the (N-1)th value.
+
+This is sort of the opposite of INTERSPERSE!."
   (loop
      :for i :below n
      :for cloned :in  (nfurcate! n gen)
