@@ -63,7 +63,7 @@
          (at 0) to (by 1) inclusive (comparator #'<))
 
 (defmethod has-next-p ((g range-backed-generator!))
-  (with-slots (to current comparator by at) g
+  (with-slots (to comparator by at) g
     (or (not to)
           (funcall comparator
                    (+ by at)
