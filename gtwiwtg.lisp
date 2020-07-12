@@ -182,7 +182,7 @@ of the sequence."
                      :sequence sequence
                      :index (1- start))))
 
-(defun from-thunk-until (thunk &optional (until (constantly nil)) clean-up)
+(defun from-thunk-until (thunk &key (until (constantly nil)) clean-up)
   "Creates a generator that produces a series of value by successively
 calling (FUNCALL THUNK).  The iterator stops whenever (FUNCALL UNTIL)
 is non null.
@@ -374,8 +374,10 @@ Error Conditions:
     (from-thunk-until
      (lambda ()
        (apply map-fn (mapcar #'next all-gens)))
+     :until
      (lambda ()
        (some (complement #'has-next-p) all-gens)) ; when at least one has no next value
+     :clean-up
      (lambda ()
        (dolist (g all-gens) (stop g))))))
 
@@ -390,6 +392,8 @@ Error Condition:
   (let (on-deck)
     (from-thunk-until
      (lambda () on-deck) ; consumers always call has-next-p before next
+
+     :until
      (lambda ()
        (loop
           :while (has-next-p gen)
@@ -399,6 +403,8 @@ Error Condition:
                 (setf on-deck candidate)
                 (return nil))   ; Don't stop generating, we found one
           :finally (return t))) ; Stop generating, we can't find one.
+
+     :clean-up
      (lambda ()
        (stop gen)))))
 
@@ -434,6 +440,7 @@ Error Conditions:
         (from-thunk-until
          (lambda () (next sub-gen))
          
+         :until
          (lambda ()
            (loop
               :until (has-next-p sub-gen)
@@ -446,7 +453,8 @@ Error Conditions:
            ;; hence:
            (not (or (has-next-p sub-gen)
                     (has-next-p gen))))
-         
+
+         :clean-up
          (lambda ()
            (stop gen)
            (when sub-gen (stop sub-gen)))))))
@@ -509,9 +517,11 @@ Error Conditions:
                                      all-gens)))
          (car vals)))
 
+     :until
      (lambda ()
        (null all-gens))
 
+     :clean-up
      (lambda ()
        (dolist (g all-gens) (stop g))))))
 
@@ -590,10 +600,12 @@ Caveat:
 
                     (t (error "Attempted to get next from a spent generator."))))
 
+            :until
             (lambda ()
               (and (not (has-next-p source-generator))
                    (queue-empty-p local-q)))
 
+            :clean-up
             (lambda ()
               (setf (car local-stop) t)
               (when (every #'car stop-cells)
