@@ -60,7 +60,7 @@
 ;;; Generator Classes ;;; 
 
 (a-generator-class range-backed-generator! ()
-         (at 0) to (by 1) inclusive (comparator #'<))
+         (at 0) to (by 1) (comparator #'<))
 
 (defmethod has-next-p ((g range-backed-generator!))
   (with-slots (to comparator by at) g
@@ -162,7 +162,6 @@ If TO is NIL, then the generator produces an infinite sequence.
                         (if inclusive #'>= #'>))))
     (make-instance 'range-backed-generator!
                    :comparator comparator
-                   :inclusive inclusive
                    :at (- from by)
                    :to to
                    :by by)))
