@@ -21,7 +21,7 @@ docstring. Many docstrings include examples of use.
 
 ```
 
-## First, Here's the Action
+## First, Some Action
 
 Here are a few examples to show you what you can do.  A more involved
 example apears at the end of the document, following the tutorial.
