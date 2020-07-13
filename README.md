@@ -249,7 +249,7 @@ Here are some simple examples of their use:
 
 - `(zip! gen1 &rest gens)` is shorthand for `(map! #'list gen1 gen2 ...)`
 - `(indexed! gen)` is shorthand for `(zip! (range) gen)`
-- `(concat! gen &rest gens)` is shorthand for `(inflate! #'identity (seq (list* gen1 gen2 ...)))`
+- `(concat! gen &rest gens)` concatenates generators
 - `(skip! n gen)` produces a generator by skipping the first `n` values in `gen`
 - `(skip-while! pred gen)` produces a generator by skippng elements of `gen` while `pred` is `t`
 - `(merge! comp gen1 gen2 &rest gens)` emulates the behavior of `merge` but for generators
