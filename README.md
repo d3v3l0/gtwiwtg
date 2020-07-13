@@ -97,7 +97,8 @@ definition.
 A generator is an object that can produce a series of values, one
 value at a time.  Generators are sometimes convenient when you want to
 deal with series that are too long to fit into memory. They also help
-when you want to generate sequential data using functions.
+when you want to generate sequential data using recurrence relations,
+as in the Fibonacci example above.
 
 ### Three Kinds Of Function 
 
