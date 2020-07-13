@@ -1,10 +1,10 @@
 ;;;; gtwiwtg.asd
 
 (asdf:defsystem #:gtwiwtg
-  :description "Describe gtwiwtg here"
-  :author "Your Name <your.name@example.com>"
-  :license  "Specify license here"
-  :version "0.0.1"
+  :description "Generators and consumers."
+  :author "Colin Okay <cbeok@protonmail.com>"
+  :license  "GPLv3"
+  :version "0.1.1"
   :serial t
   :components ((:file "package")
                (:file "gtwiwtg")))
