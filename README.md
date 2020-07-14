@@ -91,14 +91,15 @@ example apears at the end of the document, following the tutorial.
 
 GTWIWTG is a tiny library for creating and using generators. 
 
-If you have never heard of generators before, let me offer a
-definition.
+If you have never heard of generators before, let me offer *a*
+definition, but not *the* definition.
 
-A generator is an object that can produce a series of values, one
-value at a time.  Generators are sometimes convenient when you want to
-deal with series that are too long to fit into memory. They also help
-when you want to generate sequential data using recurrence relations,
-as in the Fibonacci example above.
+For the purposes of this library, a generator is an object that can
+produce a series of values, one value at a time.  Generators are
+sometimes convenient when you want to deal with series that are too
+long to fit into memory. They also help when you want to generate
+sequential data using recurrence relations, as in the Fibonacci
+example above.
 
 ### Three Kinds Of Function 
 
@@ -208,7 +209,7 @@ The three core transformation functions are:
 Admittedly, the behavior of `inflate!` is difficult to grok by reading a description. 
 Once you begin to use it, however, it becomes indispensible.
 
-[NB: `inflate!` is really the monadic bind operator in disguise.]
+[NB: `inflate!` is really a *kind of* monadic bind operator in disguise.]
 
 Here are some simple examples of their use:
 
