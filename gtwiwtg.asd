@@ -7,4 +7,5 @@
   :version "0.1.1"
   :serial t
   :components ((:file "package")
-               (:file "gtwiwtg")))
+               (:file "gtwiwtg"))
+  :in-order-to ((test-op (test-op gtwiwtg-test))))
